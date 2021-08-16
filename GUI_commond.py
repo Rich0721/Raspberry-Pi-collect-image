@@ -5,7 +5,7 @@ import re
 import json
 import cv2
 from picamera.array import PiRGBArray
-from picamera import Picamera
+from picamera import PiCamera
 from time import sleep
 
 #################################################
@@ -24,25 +24,15 @@ def limitInputDigital(P):
 def hardware_commond(image_label):
     image = Image.open("./basic_image/pi_GPIO.png").resize((480, 360))
     image = ImageTk.PhotoImage(image)
+    
     image_label.configure(image=image)
     image_label.image = image
 
 
-def software_commond(image_label, width, height):
-    
-    #cap = cv2.VideoCapture(0)
-    camera = Picamera()
-    rawCamera = PiRGBArray(camera)
-    sleep(0.01)
+def software_commond(frame, image_label):
     
     try:
-        #ret, frame = cap.read()
-        camera.capture(rawCamera, format='rgb')
-        image = Image.fromarray(rawCamera.array)
-        width, height = image.size
-        #image = cv2.resize(frame, (480, 360))
-        #image = Image.fromarray(image)
-        image = ImageTk.PhotoImage(image)
+        image = ImageTk.PhotoImage(frame)
         image_label.configure(image=image)
         image_label.image = image
     except:
@@ -50,6 +40,8 @@ def software_commond(image_label, width, height):
         image = ImageTk.PhotoImage(image)
         image_label.configure(image=image)
         image_label.image = image
+    
+        
 
 def OpenImage(textvar, image_label):
     
@@ -168,3 +160,18 @@ def write_json(file_name, stringVars:dict):
         
     with open(file_name, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+class VideoCapture:
+    def __init__(self):
+        self.camera = PiCamera()
+        self.camera.framerate = 32
+        self.rawCapture = PiRGBArray(self.camera)
+        sleep(0.1)
+    
+    def get_frame(self):
+        self.camera.capture(self.rawCapture, format='rgb')
+        return self.rawCapture.array
+    
+    def __del__(self):
+        self.camera.close()

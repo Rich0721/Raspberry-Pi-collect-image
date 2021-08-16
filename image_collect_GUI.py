@@ -1,136 +1,168 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image
-from GUI_commond import OpenImage, limitInputDigital, CheckUserInput, hardware_commond, software_commond
+from GUI_commond import   VideoCapture, CheckUserInput
+from PIL import ImageTk, Image
+#from picamera.array import PiRGBArray
+#from picamera import PiCamera
 
 ###########################################
 TITLE_NAME_FONT = ('Times', 16, 'bold')
 BUTTON_FONT = ('Times', 16)
 ALARM_FONT = ("Times", 16,  "bold")
-IMAGE_WIDTH = 0
-IMAGE_HEIGHT = 0
 ###########################################
 
+class collectImageGUI:
 
-def setBasicLabel(windows, vcmd):
+    def __init__(self, width=600, height=800):
+        
+        self.windows = tk.Tk()
+        self.windows.title("AUO L7B影像蒐集")
+        self.windows.geometry("{}x{}".format(width, height))
+        self.camera = VideoCapture()
+        self.image_width = 0
+        self.image_height = 0
 
-    # Set project, FTP, user and password's label and text
-    basic_set_frame = tk.Frame(windows, width=100, height=200)
-    project_label = tk.Label(basic_set_frame, text="Project name", font=TITLE_NAME_FONT)
-    project_label.grid(column=0, row=0)
-    project_var = tk.StringVar()
-    project_text = tk.Entry(basic_set_frame, textvariable=project_var)
-    project_text.grid(column=1, row=0)
-    FTP_label = tk.Label(basic_set_frame, text="FTP server IP", font=TITLE_NAME_FONT)
-    FTP_label.grid(column=0, row=1)
-    FTP_var = tk.StringVar()
-    FTP_text = tk.Entry(basic_set_frame, textvariable=FTP_var)
-    FTP_text.grid(column=1, row=1)
-    user_label = tk.Label(basic_set_frame, text="user", font=TITLE_NAME_FONT)
-    user_label.grid(column=0, row=2)
-    user_var = tk.StringVar()
-    user_text = tk.Entry(basic_set_frame, textvariable=user_var)
-    user_text.grid(column=1, row=2)
-    password_label = tk.Label(basic_set_frame, text="password", font=TITLE_NAME_FONT)
-    password_label.grid(column=0, row=3)
-    password_var = tk.StringVar()
-    password_text = tk.Entry(basic_set_frame, textvariable=password_var)
-    password_text.grid(column=1, row=3)
-    basic_set_frame.pack()
+        self.setBasicLabel()
+        self.delay = 15
+        self.update_condition
+        
+        self.windows.mainloop()
 
-    # Set collect image of method
-    method_value = tk.IntVar()
-    #method_value.set(1)
-    method_frame = tk.Frame(windows, width=100, height=50)
-    method_label = tk.Label(method_frame, text="Collected method" , font=TITLE_NAME_FONT)
-    method_label.grid(column=0, row=0)
-    method_image_btn = tk.Radiobutton(method_frame, text="image", variable=method_value, value=0, font=BUTTON_FONT)
-    method_image_btn.grid(column=1, row=0)
-    method_video_btn = tk.Radiobutton(method_frame, text='video', variable=method_value, value=1, font=BUTTON_FONT)
-    method_video_btn.grid(column=2, row=0)
-    method_frame.pack()
 
-    # Set collect image condition
-    condition_value = tk.IntVar()
-    path_text_var = tk.StringVar()
-    condition_frame = tk.Frame(windows, width=100, height=250)
-    condition_label = tk.Label(condition_frame, text="Trigger Image", font=TITLE_NAME_FONT)
-    condition_label.grid(column=0, row=0)
-    condition_hardware = tk.Radiobutton(condition_frame, text="hardware", variable=condition_value, value=0, font=BUTTON_FONT, command=lambda:hardware_commond(condition_image))
-    condition_hardware.grid(column=1, row=0)
-    condition_software = tk.Radiobutton(condition_frame, text="software", variable=condition_value, value=1, font=BUTTON_FONT, command=lambda:software_commond(condition_image, IMAGE_WIDTH, IMAGE_HEIGHT))
-    condition_software.grid(column=2, row=0)
-    condition_frame.pack()
-    print("{}, {}".format(IMAGE_WIDTH, IMAGE_HEIGHT))
-    # condition real image
-    condition_image_frame = tk.Frame(windows, width=480, height=320)
-    #condition_image_path = tk.Label(condition_frame, textvariable=path_text_var, font=BUTTON_FONT)
-    #condition_image_path.grid(row=1, columnspan=2)
-    condition_image = tk.Label(condition_image_frame)
-    hardware_commond(condition_image)
-    condition_image.pack()
-    condition_image_frame.pack()
+    def setBasicLabel(self):
 
-    # Sensor Pin
-    sensor_frame = tk.Frame(windows, height=20)
-    sensor_label = tk.Label(sensor_frame, text="IR sensor PIN  ", font=TITLE_NAME_FONT)
-    sensor_label.grid(row=0, column=0)
-    sensor_text = ttk.Combobox(sensor_frame, values=["Choose Sensor Pin","3", "5", "7", "8", "11", "12", "13", "15", "16", "18", "19", "21", "22",\
-                    "23", "24", "26", "29", "31", "32", "33", "35", "36", "37", "38", "40"])
-    sensor_text.current(0)
-    sensor_text.grid(row=0, column=1)
-    sensor_frame.pack()
+        # Set project, FTP, user and password's label and text
+        self.basic_set_frame = tk.Frame(self.windows, width=100, height=200)
+        self.project_label = tk.Label(self.basic_set_frame, text="Project name", font=TITLE_NAME_FONT)
+        self.project_label.grid(column=0, row=0)
+        self.project_var = tk.StringVar()
+        self.project_text = tk.Entry(self.basic_set_frame, textvariable=self.project_var)
+        self.project_text.grid(column=1, row=0)
+        self.FTP_label = tk.Label(self.basic_set_frame, text="FTP server IP", font=TITLE_NAME_FONT)
+        self.FTP_label.grid(column=0, row=1)
+        self.FTP_var = tk.StringVar()
+        self.FTP_text = tk.Entry(self.basic_set_frame, textvariable=self.FTP_var)
+        self.FTP_text.grid(column=1, row=1)
+        self.user_label = tk.Label(self.basic_set_frame, text="user", font=TITLE_NAME_FONT)
+        self.user_label.grid(column=0, row=2)
+        self.user_var = tk.StringVar()
+        self.user_text = tk.Entry(self.basic_set_frame, textvariable=self.user_var)
+        self.user_text.grid(column=1, row=2)
+        self.password_label = tk.Label(self.basic_set_frame, text="password", font=TITLE_NAME_FONT)
+        self.password_label.grid(column=0, row=3)
+        self.password_var = tk.StringVar()
+        self.password_text = tk.Entry(self.basic_set_frame, textvariable=self.password_var)
+        self.password_text.grid(column=1, row=3)
+        self.basic_set_frame.pack()
 
-    # other set
-    other_frame = tk.Frame(windows, height=20)
-    video_time_label = tk.Label(other_frame, text="Every video time(sec)", font=TITLE_NAME_FONT)
-    video_time_label.grid(row=0, column=0)
-    video_time_var = tk.StringVar()
-    video_time_text = tk.Entry(other_frame, textvariable=video_time_var)
-    video_time_text.grid(row=0, column=1)
-    interval_time_label = tk.Label(other_frame, text="Delay time(sec)", font=TITLE_NAME_FONT)
-    interval_time_label.grid(row=1, column=0)
-    interval_time_var = tk.StringVar()
-    interval_time_text = tk.Entry(other_frame, textvariable=interval_time_var)
-    interval_time_text.grid(row=1, column=1)
-    other_frame.pack()
+        # Set collect image of method
+        self.method_value = tk.IntVar()
+        #method_value.set(1)
+        self.method_frame = tk.Frame(self.windows, width=100, height=50)
+        self.method_label = tk.Label(self.method_frame, text="Collected method" , font=TITLE_NAME_FONT)
+        self.method_label.grid(column=0, row=0)
+        self.method_image_btn = tk.Radiobutton(self.method_frame, text="image", variable=self.method_value, value=0, font=BUTTON_FONT)
+        self.method_image_btn.grid(column=1, row=0)
+        self.method_video_btn = tk.Radiobutton(self.method_frame, text='video', variable=self.method_value, value=1, font=BUTTON_FONT)
+        self.method_video_btn.grid(column=2, row=0)
+        self.method_frame.pack()
 
-    # output
-    output_frame = tk.Frame(windows)
-    check_basic_text = tk.StringVar()
-    check_basic_label = tk.Label(output_frame, foreground="red", font=ALARM_FONT, textvariable=check_basic_text)
-    check_basic_label.grid(row=0, column=0)
-    check_pin_text = tk.StringVar()
-    check_pin_label = tk.Label(output_frame, foreground="red", font=ALARM_FONT, textvariable=check_pin_text)
-    check_pin_label.grid(row=1, column=0)
-    check_time_text = tk.StringVar()
-    check_time_label = tk.Label(output_frame, foreground="red", font=ALARM_FONT, textvariable=check_time_text)
-    check_time_label.grid(row=2, column=0)
-    output_frame.pack()
+        # Set collect image condition
+        self.condition_value = tk.IntVar()
+        self.path_text_var = tk.StringVar()
+        self.condition_frame = tk.Frame(self.windows, width=100, height=250)
+        self.condition_label = tk.Label(self.condition_frame, text="Trigger Image", font=TITLE_NAME_FONT)
+        self.condition_label.grid(column=0, row=0)
+        self.condition_hardware = tk.Radiobutton(self.condition_frame, text="hardware", variable=self.condition_value, value=0, font=BUTTON_FONT)
+        self.condition_hardware.grid(column=1, row=0)
+        self.condition_software = tk.Radiobutton(self.condition_frame, text="software", variable=self.condition_value, value=1, font=BUTTON_FONT)
+        self.condition_software.grid(column=2, row=0)
+        self.condition_frame.pack()
 
-    user_choice_dict = {
-        "Project_name": project_var,
-        "FTP_IP" : FTP_var,
-        "user": user_var,
-        "password" : password_var,
-        "path": path_text_var,
-        "sensor": sensor_text,
-        "video_time": video_time_var,
-        "interval_time": interval_time_var,
-        "method": method_value
-    }
+        # condition real image
+        self.condition_image_frame = tk.Frame(self.windows, width=480, height=320)
+        #condition_image_path = tk.Label(condition_frame, textvariable=path_text_var, font=BUTTON_FONT)
+        #condition_image_path.grid(row=1, columnspan=2)
+        #self.condition_image = tk.Canvas(self.condition_image_frame)
+        self.condition_image = tk.Label(self.condition_image_frame)
+        self.condition_image.grid(column=0, row=0)
+        self.condition_image_frame.pack()
 
-    produce_button = tk.Button(windows, text="Create", font=BUTTON_FONT, command=lambda : CheckUserInput(user_choice_dict, \
-                                                                                                alarmVars=[check_basic_text, check_pin_text, check_time_text]))
-    produce_button.pack()
+        # Sensor Pin
+        self.sensor_frame = tk.Frame(self.windows, height=20)
+        self.sensor_label = tk.Label(self.sensor_frame, text="IR sensor PIN  ", font=TITLE_NAME_FONT)
+        self.sensor_label.grid(row=0, column=0)
+        self.sensor_text = ttk.Combobox(self.sensor_frame, values=["Choose Sensor Pin","3", "5", "7", "8", "11", "12", "13", "15", "16", "18", "19", "21", "22",\
+                        "23", "24", "26", "29", "31", "32", "33", "35", "36", "37", "38", "40"])
+        self.sensor_text.current(0)
+        self.sensor_text.grid(row=0, column=1)
+        self.sensor_frame.pack()
 
-    return windows    
+        # other set
+        self.other_frame = tk.Frame(self.windows, height=20)
+        self.video_time_label = tk.Label(self.other_frame, text="Every video time(sec)", font=TITLE_NAME_FONT)
+        self.video_time_label.grid(row=0, column=0)
+        self.video_time_var = tk.StringVar()
+        self.video_time_text = tk.Entry(self.other_frame, textvariable=self.video_time_var)
+        self.video_time_text.grid(row=0, column=1)
+        self.interval_time_label = tk.Label(self.other_frame, text="Delay time(sec)", font=TITLE_NAME_FONT)
+        self.interval_time_label.grid(row=1, column=0)
+        self.interval_time_var = tk.StringVar()
+        self.interval_time_text = tk.Entry(self.other_frame, textvariable=self.interval_time_var)
+        self.interval_time_text.grid(row=1, column=1)
+        self.other_frame.pack()
 
+        # output
+        self.output_frame = tk.Frame(self.windows)
+        self.check_basic_text = tk.StringVar()
+        self.check_basic_label = tk.Label(self.output_frame, foreground="red", font=ALARM_FONT, textvariable=self.check_basic_text)
+        self.check_basic_label.grid(row=0, column=0)
+        self.check_pin_text = tk.StringVar()
+        self.check_pin_label = tk.Label(self.output_frame, foreground="red", font=ALARM_FONT, textvariable=self.check_pin_text)
+        self.check_pin_label.grid(row=1, column=0)
+        self.check_time_text = tk.StringVar()
+        self.check_time_label = tk.Label(self.output_frame, foreground="red", font=ALARM_FONT, textvariable=self.check_time_text)
+        self.check_time_label.grid(row=2, column=0)
+        self.output_frame.pack()
+
+        user_choice_dict = {
+            "Project_name": self.project_var,
+            "FTP_IP" : self.FTP_var,
+            "user": self.user_var,
+            "password" : self.password_var,
+            "path": self.path_text_var,
+            "sensor": self.sensor_text,
+            "video_time": self.video_time_var,
+            "interval_time": self.interval_time_var,
+            "method": self.method_value
+        }
+
+        self.produce_button = tk.Button(self.windows, text="Create", font=BUTTON_FONT, command=lambda : CheckUserInput(user_choice_dict, \
+                                                                                                    alarmVars=[self.check_basic_text, self.check_pin_text, self.check_time_text]))
+        self.produce_button.pack()
+    
+    def update_condition(self):
+
+        if self.condition_value.get() == 0:
+            image = Image.open("./basic_image/pi_GPIO.png").resize((480, 360))
+            image = ImageTk.PhotoImage(image)
+        else:
+            frame = self.camera.get_frame()
+            image = frame.resize((480, 360))
+            image = ImageTk.PhotoImage(image=Image.fromarray(image))
+
+        self.condition_image.configure(image=image)
+        self.condition_image.image = image
+
+        self.windows.after(self.delay, self.update_condition)
+        
 
 if __name__ == "__main__":
-    windows = tk.Tk()
-    windows.title("AUO L7B影像蒐集")
-    windows.geometry("600x800")
-    vcmd = windows.register(limitInputDigital, "%P")
-    windows = setBasicLabel(windows, vcmd)
-    windows.mainloop()
+    #windows = tk.Tk()
+    #windows.title("AUO L7B影像蒐集")
+    #windows.geometry("600x800")
+    #vcmd = windows.register(limitInputDigital, "%P")
+    #windows = setBasicLabel(windows, vcmd)
+    #windows.mainloop()
+    GUI = collectImageGUI() 
