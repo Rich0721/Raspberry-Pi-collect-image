@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image
-from GUI_commond import   VideoCapture, CheckUserInput
+from GUI_commond import  VideoCapture, CheckUserInput
 from PIL import ImageTk, Image
+import cv2
 #from picamera.array import PiRGBArray
 #from picamera import PiCamera
 
@@ -22,10 +23,11 @@ class collectImageGUI:
         self.camera = VideoCapture()
         self.image_width = 0
         self.image_height = 0
+        self.rate = 1
 
         self.setBasicLabel()
         self.delay = 15
-        self.update_condition
+        self.update_condition()
         
         self.windows.mainloop()
 
@@ -143,13 +145,16 @@ class collectImageGUI:
         self.produce_button.pack()
     
     def update_condition(self):
-
+        
         if self.condition_value.get() == 0:
-            image = Image.open("./basic_image/pi_GPIO.png").resize((480, 360))
+            image = Image.open("./basic_image/pi_GPIO.png").resize((480, 270))
             image = ImageTk.PhotoImage(image)
         else:
             frame = self.camera.get_frame()
-            image = frame.resize((480, 360))
+            h, w = frame.shape[:2]
+            
+            self.rate = 480 / w
+            image = cv2.resize(frame, (int(self.rate*w), int(self.rate*h)))
             image = ImageTk.PhotoImage(image=Image.fromarray(image))
 
         self.condition_image.configure(image=image)
@@ -159,10 +164,4 @@ class collectImageGUI:
         
 
 if __name__ == "__main__":
-    #windows = tk.Tk()
-    #windows.title("AUO L7B影像蒐集")
-    #windows.geometry("600x800")
-    #vcmd = windows.register(limitInputDigital, "%P")
-    #windows = setBasicLabel(windows, vcmd)
-    #windows.mainloop()
     GUI = collectImageGUI() 

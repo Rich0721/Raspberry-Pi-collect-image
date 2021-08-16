@@ -22,7 +22,7 @@ def limitInputDigital(P):
 
 
 def hardware_commond(image_label):
-    image = Image.open("./basic_image/pi_GPIO.png").resize((480, 360))
+    image = Image.open("./basic_image/pi_GPIO.png").resize((480, 320))
     image = ImageTk.PhotoImage(image)
     
     image_label.configure(image=image)
@@ -168,10 +168,14 @@ class VideoCapture:
         self.camera.framerate = 32
         self.rawCapture = PiRGBArray(self.camera)
         sleep(0.1)
-    
+        
     def get_frame(self):
         self.camera.capture(self.rawCapture, format='rgb')
-        return self.rawCapture.array
+        image =self.rawCapture.array
+        self.rawCapture.truncate(0)
+        return image 
+    
+    
     
     def __del__(self):
         self.camera.close()
