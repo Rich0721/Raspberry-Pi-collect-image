@@ -1,11 +1,14 @@
 import tkinter as tk
+from tkinter import ttk
 from PIL import ImageTk, Image
-from GUI_commond import OpenImage, limitInputDigital, CheckUserInput
+from GUI_commond import OpenImage, limitInputDigital, CheckUserInput, hardware_commond, software_commond
 
 ###########################################
 TITLE_NAME_FONT = ('Times', 16, 'bold')
 BUTTON_FONT = ('Times', 16)
 ALARM_FONT = ("Times", 16,  "bold")
+IMAGE_WIDTH = 0
+IMAGE_HEIGHT = 0
 ###########################################
 
 
@@ -37,34 +40,44 @@ def setBasicLabel(windows, vcmd):
 
     # Set collect image of method
     method_value = tk.IntVar()
+    #method_value.set(1)
     method_frame = tk.Frame(windows, width=100, height=50)
     method_label = tk.Label(method_frame, text="Collected method" , font=TITLE_NAME_FONT)
     method_label.grid(column=0, row=0)
-    method_image_btn = tk.Radiobutton(method_frame, text="image", variable=method_value, value=1, font=BUTTON_FONT)
+    method_image_btn = tk.Radiobutton(method_frame, text="image", variable=method_value, value=0, font=BUTTON_FONT)
     method_image_btn.grid(column=1, row=0)
-    method_video_btn = tk.Radiobutton(method_frame, text='video', variable=method_value, value=2, font=BUTTON_FONT)
+    method_video_btn = tk.Radiobutton(method_frame, text='video', variable=method_value, value=1, font=BUTTON_FONT)
     method_video_btn.grid(column=2, row=0)
     method_frame.pack()
 
     # Set collect image condition
+    condition_value = tk.IntVar()
     path_text_var = tk.StringVar()
     condition_frame = tk.Frame(windows, width=100, height=250)
     condition_label = tk.Label(condition_frame, text="Trigger Image", font=TITLE_NAME_FONT)
     condition_label.grid(column=0, row=0)
-    condition_image_path = tk.Label(condition_frame, textvariable=path_text_var, font=BUTTON_FONT)
-    condition_image_path.grid(row=1, columnspan=2)
-    condition_image = tk.Label(condition_frame)
-    condition_image.grid(row=2, columnspan=2)
-    condition_btn = tk.Button(condition_frame, text="choice", font=BUTTON_FONT, command=lambda:OpenImage(path_text_var, condition_image))
-    condition_btn.grid(column=1, row=0)
+    condition_hardware = tk.Radiobutton(condition_frame, text="hardware", variable=condition_value, value=0, font=BUTTON_FONT, command=lambda:hardware_commond(condition_image))
+    condition_hardware.grid(column=1, row=0)
+    condition_software = tk.Radiobutton(condition_frame, text="software", variable=condition_value, value=1, font=BUTTON_FONT, command=lambda:software_commond(condition_image, IMAGE_WIDTH, IMAGE_HEIGHT))
+    condition_software.grid(column=2, row=0)
     condition_frame.pack()
+    print("{}, {}".format(IMAGE_WIDTH, IMAGE_HEIGHT))
+    # condition real image
+    condition_image_frame = tk.Frame(windows, width=480, height=320)
+    #condition_image_path = tk.Label(condition_frame, textvariable=path_text_var, font=BUTTON_FONT)
+    #condition_image_path.grid(row=1, columnspan=2)
+    condition_image = tk.Label(condition_image_frame)
+    hardware_commond(condition_image)
+    condition_image.pack()
+    condition_image_frame.pack()
 
     # Sensor Pin
     sensor_frame = tk.Frame(windows, height=20)
     sensor_label = tk.Label(sensor_frame, text="IR sensor PIN  ", font=TITLE_NAME_FONT)
     sensor_label.grid(row=0, column=0)
-    sensor_var = tk.StringVar()
-    sensor_text = tk.Entry(sensor_frame, textvariable=sensor_var)
+    sensor_text = ttk.Combobox(sensor_frame, values=["Choose Sensor Pin","3", "5", "7", "8", "11", "12", "13", "15", "16", "18", "19", "21", "22",\
+                    "23", "24", "26", "29", "31", "32", "33", "35", "36", "37", "38", "40"])
+    sensor_text.current(0)
     sensor_text.grid(row=0, column=1)
     sensor_frame.pack()
 
@@ -101,7 +114,7 @@ def setBasicLabel(windows, vcmd):
         "user": user_var,
         "password" : password_var,
         "path": path_text_var,
-        "sensor": sensor_var,
+        "sensor": sensor_text,
         "video_time": video_time_var,
         "interval_time": interval_time_var,
         "method": method_value

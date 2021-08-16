@@ -3,6 +3,10 @@ from PIL import ImageTk, Image
 from tkinter import filedialog
 import re
 import json
+import cv2
+from picamera.array import PiRGBArray
+from picamera import Picamera
+from time import sleep
 
 #################################################
 IP_RELU = "^10.(96|97).+((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
@@ -16,6 +20,36 @@ def limitInputDigital(P):
     else:
         return False
 
+
+def hardware_commond(image_label):
+    image = Image.open("./basic_image/pi_GPIO.png").resize((480, 360))
+    image = ImageTk.PhotoImage(image)
+    image_label.configure(image=image)
+    image_label.image = image
+
+
+def software_commond(image_label, width, height):
+    
+    #cap = cv2.VideoCapture(0)
+    camera = Picamera()
+    rawCamera = PiRGBArray(camera)
+    sleep(0.01)
+    
+    try:
+        #ret, frame = cap.read()
+        camera.capture(rawCamera, format='rgb')
+        image = Image.fromarray(rawCamera.array)
+        width, height = image.size
+        #image = cv2.resize(frame, (480, 360))
+        #image = Image.fromarray(image)
+        image = ImageTk.PhotoImage(image)
+        image_label.configure(image=image)
+        image_label.image = image
+    except:
+        image = Image.open("./basic_image/not_connecting.png").resize((480, 360))
+        image = ImageTk.PhotoImage(image)
+        image_label.configure(image=image)
+        image_label.image = image
 
 def OpenImage(textvar, image_label):
     
@@ -72,9 +106,9 @@ def CheckUserInput(stringVars:dict, alarmVars:list):
     
     if check_pass:
         show_text = "Please check the following information\nProject Name:{}\nFTP IP:{}\nUser:{}\nPassword:{}\n".format(stringVars['Project_name'].get(), ftp_ip, stringVars["user"].get(), stringVars['password'].get())
-        if stringVars["method"].get() == 1:
+        if stringVars["method"].get() == 0:
             show_text += "Method:Image\n"
-        elif stringVars["method"].get() == 2:
+        elif stringVars["method"].get() == 1:
             show_text += "Method:Video\n"
 
         if len(stringVars['path'].get()) > 0:
@@ -104,9 +138,9 @@ def write_json(file_name, stringVars:dict):
     data["user"] = stringVars['user'].get()
     data["password"] = stringVars["password"].get()
 
-    if stringVars["method"].get() == 1:
+    if stringVars["method"].get() == 0:
         data["method"] = "image"
-    elif stringVars["method"].get() == 2:
+    elif stringVars["method"].get() == 1:
         data["method"] = "video"
 
     if len(stringVars["path"].get()) == 0:
