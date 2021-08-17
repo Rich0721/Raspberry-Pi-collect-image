@@ -146,7 +146,6 @@ def Test_FTP(ip, user, password):
         return True
     except:
         return False
-    
 
 class VideoCapture:
     def __init__(self):
@@ -165,45 +164,86 @@ class VideoCapture:
         self.camera.close()
 
 
-def savePhoto(path, roi, frame):
+def savePhoto(path, frame):
     if frame is not None:
         images = glob(os.path.join("./condition_images", "condition_*.jpg"))
-        path.append(os.path.join("./condition_images", str(len(images) + ".jpg")))
-        roi.append([])
+        path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join("./condition_images", str(len(images) + ".jpg")), frame)
+        cv2.imwrite(os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg"), frame)
 
 
 # Select image's roi and save result.
 def cutPhoto(path, roi, frame):
     if frame is not None:
+        
+        # save image
         images = glob(os.path.join("./condition_images", "condition_*.jpg"))
-        path.append(os.path.join("./condition_images", str(len(images) + ".jpg")))
-        frame = cv2.cvtColor(frame)
-        cv2.imwrite(os.path.join("./condition_images", str(len(images) + ".jpg")), frame)
+        path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg"), frame)
 
         original_h, original_w = frame.shape[:2]
         display_h = 480
         display_w = 640
-        img = cv2.resize(frame, (display_w, display_h))
-        rects = []
+        rate_w = original_w / 640
+        rate_h = original_h / 480
+        draw = drawRoI(rate_w, rate_h)
+        img = cv2.resize(frame, (display_h, display_w))
+        draw.call(img)
         while True:
-            cv2.imshow("image", img)
-            rect = cv2.selectROI("image", img, showCrosshair, fromCenter)
-            (x, y, w, h) = rect
-            img = cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 1)
-
-            x = x * (original_w / 640)
-            y = y * (original_h / 480)
-            w = w * (original_w / 640)
-            h = h * (original_h / 480)
-
-            rects.append([int(x), int(y), int(w), int(h)])
-
-            cv2.destroyAllWindows()
-            key = cv2.waitKey(0) & 0xFF
-
+            cv2.imshow("Cut Image", draw.show_image())
+            key = cv2.waitKey(1)
+            
+            # Close program with keyboard 'q'
             if key == ord('q'):
+                cv2.destroyAllWindows()
                 break
+        roi.append(draw.get_rectangle())
 
-        roi.append(rects)
+
+# Implement selectROI
+class drawRoI:
+
+    def __init__(self, rate_w, rate_h):
+
+        self.drawing = False
+        self.xmin = 0
+        self.ymin = 0
+        self.xmax = 0
+        self.ymax = 0
+        self.rects = []
+        self.rate_w = rate_w
+        self.rate_h = rate_h
+    
+    def draw(self, event, x, y, flags, param):
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.drawing = True
+            self.xmin = x
+            self.ymin = y
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.drawing:
+                self.clone_image = self.temp_image.copy()
+                cv2.rectangle(self.clone_image, (self.xmin, self.ymin), (x, y), (0, 0, 255), 2)
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.xmax = x
+            self.ymax = y
+            self.drawing = False
+            self.temp_image = self.clone_image
+            self.rects.append([int(self.xmin * self.rate_w), int(self.ymin * self.rate_h), int(self.xmax * self.rate_w), int(self.ymax * self.rate_h)])
+
+    def show_image(self):
+        return self.clone_image
+
+    def get_rectangle(self):
+        if len(self.rects) == 0:
+            raise ValueError("Need select ROI.")
+        return self.rects
+
+    def call(self, frame):
+        self.original_image = frame
+        self.temp_image = frame.copy()
+        self.clone_image = self.original_image.copy()
+
+        cv2.namedWindow("Cut Image")
+        cv2.setMouseCallback("Cut Image", self.draw)

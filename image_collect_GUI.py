@@ -24,7 +24,7 @@ class collectImageGUI:
         self.image_width = 0
         self.image_height = 0
         self.rate = 1
-        self.path = []
+        self.path = None
         self.roi = []
         self.photo = None
 
@@ -92,9 +92,9 @@ class collectImageGUI:
         self.condition_image_frame.pack()
 
         self.condition_button_frame = tk.Frame(self.windows, height=20)
-        self.condition_cut_button = tk.Button(self.condition_button_frame, text="Cut", font=BUTTON_FONT, command=cutPhoto)
+        self.condition_cut_button = tk.Button(self.condition_button_frame, text="Cut", font=BUTTON_FONT, command=lambda :cutPhoto(self.path, self.roi, self.photo))
         self.condition_cut_button.grid(column=0, row=0)
-        self.condition_save_button = tk.Button(self.condition_button_frame, text="Save", font=BUTTON_FONT, command=savePhoto)
+        self.condition_save_button = tk.Button(self.condition_button_frame, text="Save", font=BUTTON_FONT, command=lambda: savePhoto(self.path, self.photo))
         self.condition_save_button.grid(column=1, row=1)
         self.condition_button_frame.pack()
 
