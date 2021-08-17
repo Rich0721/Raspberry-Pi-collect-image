@@ -155,6 +155,8 @@ class collectImageGUI:
             image = Image.open("./basic_image/pi_GPIO.png").resize((480, 270))
             image = ImageTk.PhotoImage(image)
             self.photo = None
+            self.user_choice_dict["path"] = None
+            self.user_choice_dict["roi"] = None
         else:
             frame = self.camera.get_frame()
             h, w = frame.shape[:2]

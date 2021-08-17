@@ -95,12 +95,13 @@ def CheckUserInput(stringVars:dict):
             show_text += "Interval time:{}".format(stringVars['interval_time'].get())
         
         if len(stringVars['delay_time'].get()) > 0:
-            show_text += "Delay time:{}".format(stringVars['Delay_time'].get())
+            show_text += "Delay time:{}".format(stringVars['delay_time'].get())
 
         MsgBox = msg.askyesno("Created Check", show_text)
         if MsgBox:
             write_json(stringVars['Project_name'].get() + ".json", stringVars)
-        
+            stringVars["path"] = None
+            stringVars["roi"] = None
 
 def write_json(file_name, stringVars:dict):
 
@@ -174,45 +175,6 @@ class VideoCapture:
     def __del__(self):
         self.camera.close()
 
-
-def savePhoto(frame, list_path):
-    if frame is not None:
-        images = glob(os.path.join("./condition_images", "condition_*.jpg"))
-        path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path, frame)
-        list_path.append(path)
-    
-# Select image's roi and save result.
-def cutPhoto(frame):
-    
-    if frame is not None:
-        # save image
-        images = glob(os.path.join("./condition_images", "condition_*.jpg"))
-        path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path, frame)
-
-        original_w, original_h = frame.shape[:2]
-        display_h = 480
-        display_w = 640
-        rate_w = original_w / 640
-        rate_h = original_h / 480
-        draw = drawRoI(rate_w, rate_h)
-        img = cv2.resize(frame, (display_w, display_h))
-        draw.call(img)
-        while True:
-            cv2.imshow("Cut Image", draw.show_image())
-            key = cv2.waitKey(1)
-            
-            # Close program with keyboard 'q'
-            if key == ord('q'):
-                cv2.destroyAllWindows()
-                break
-        roi = draw.get_rectangle()
-        return path, roi
-    return None, None
-
 # Implement selectROI
 class drawRoI:
 
@@ -242,6 +204,7 @@ class drawRoI:
             self.ymax = y
             self.drawing = False
             self.temp_image = self.clone_image
+            self.swap()
             self.rects.append([int(self.xmin * self.rate_w), int(self.ymin * self.rate_h), int(self.xmax * self.rate_w), int(self.ymax * self.rate_h)])
         elif event == cv2.EVENT_RBUTTONDOWN:
             if len(self.rects) > 0:
@@ -250,7 +213,18 @@ class drawRoI:
                 for rect in self.rects:
                     cv2.rectangle(self.clone_image, (int(rect[0]/self.rate_w), int(rect[1]/self.rate_h)), (int(rect[2]/self.rate_w), int(rect[3]/self.rate_h)), (0, 0, 255), 2)
                 self.temp_image = self.clone_image
-                
+    
+    def swap(self):
+        if self.xmin > self.xmax:
+            temp = self.xmin
+            self.xmin = self.xmax
+            self.xmax = temp
+        
+        if self.ymin > self.ymax:
+            temp =  self.ymin
+            self.ymin = self.ymax
+            self.ymax = temp
+            
     def show_image(self):
         return self.clone_image
 
