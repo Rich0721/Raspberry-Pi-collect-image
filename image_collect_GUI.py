@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image
-from GUI_commond import  VideoCapture, CheckUserInput
+from GUI_commond import  CheckUserInput, VideoCapture, savePhoto, cutPhoto
 from PIL import ImageTk, Image
 import cv2
 #from picamera.array import PiRGBArray
@@ -20,10 +20,13 @@ class collectImageGUI:
         self.windows = tk.Tk()
         self.windows.title("AUO L7B影像蒐集")
         self.windows.geometry("{}x{}".format(width, height))
-        self.camera = VideoCapture()
+        #self.camera = VideoCapture()
         self.image_width = 0
         self.image_height = 0
         self.rate = 1
+        self.path = []
+        self.roi = []
+        self.photo = None
 
         self.setBasicLabel()
         self.delay = 15
@@ -84,12 +87,16 @@ class collectImageGUI:
 
         # condition real image
         self.condition_image_frame = tk.Frame(self.windows, width=480, height=320)
-        #condition_image_path = tk.Label(condition_frame, textvariable=path_text_var, font=BUTTON_FONT)
-        #condition_image_path.grid(row=1, columnspan=2)
-        #self.condition_image = tk.Canvas(self.condition_image_frame)
         self.condition_image = tk.Label(self.condition_image_frame)
         self.condition_image.grid(column=0, row=0)
         self.condition_image_frame.pack()
+
+        self.condition_button_frame = tk.Frame(self.windows, height=20)
+        self.condition_cut_button = tk.Button(self.condition_button_frame, text="Cut", font=BUTTON_FONT, command=cutPhoto)
+        self.condition_cut_button.grid(column=0, row=0)
+        self.condition_save_button = tk.Button(self.condition_button_frame, text="Save", font=BUTTON_FONT, command=savePhoto)
+        self.condition_save_button.grid(column=1, row=1)
+        self.condition_button_frame.pack()
 
         # Sensor Pin
         self.sensor_frame = tk.Frame(self.windows, height=20)
@@ -149,14 +156,14 @@ class collectImageGUI:
         if self.condition_value.get() == 0:
             image = Image.open("./basic_image/pi_GPIO.png").resize((480, 270))
             image = ImageTk.PhotoImage(image)
+            self.photo = None
         else:
             frame = self.camera.get_frame()
             h, w = frame.shape[:2]
-            
+            self.photo = frame
             self.rate = 480 / w
             image = cv2.resize(frame, (int(self.rate*w), int(self.rate*h)))
             image = ImageTk.PhotoImage(image=Image.fromarray(image))
-
         self.condition_image.configure(image=image)
         self.condition_image.image = image
 

@@ -4,14 +4,19 @@ from tkinter import filedialog
 import re
 import json
 import cv2
+import os
+from glob import glob
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 from time import sleep
+from ftplib import FTP
 
 #################################################
 IP_RELU = "^10.(96|97).+((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
 PI_USED_PIN = [3, 5, 7, 8, 11, 12, 13, 15, 16, 18, 19, 21, 22, 23, 24, 26, 29, 31, \
                 32, 33, 35, 36, 37, 38, 40]
+showCrosshair = False # Don't display grid
+fromCenter = False # Select top-left to button-right
 #################################################
 
 def limitInputDigital(P):
@@ -19,41 +24,6 @@ def limitInputDigital(P):
         return True
     else:
         return False
-
-
-def hardware_commond(image_label):
-    image = Image.open("./basic_image/pi_GPIO.png").resize((480, 320))
-    image = ImageTk.PhotoImage(image)
-    
-    image_label.configure(image=image)
-    image_label.image = image
-
-
-def software_commond(frame, image_label):
-    
-    try:
-        image = ImageTk.PhotoImage(frame)
-        image_label.configure(image=image)
-        image_label.image = image
-    except:
-        image = Image.open("./basic_image/not_connecting.png").resize((480, 360))
-        image = ImageTk.PhotoImage(image)
-        image_label.configure(image=image)
-        image_label.image = image
-    
-        
-
-def OpenImage(textvar, image_label):
-    
-    filename = filedialog.askopenfilename(filetypes=[("jpeg files","*.jpg"), ("png files", "*.png"),\
-                                         ("bmp files", "*.bmp"), ("All image files", "*.jpg *.jpeg *.png *.gif *.bmp")])
-    if len(filename) > 0:
-        textvar.set(filename)
-        image = Image.open(filename).resize((400, 300))
-        image = ImageTk.PhotoImage(image)
-        image_label.configure(image=image)
-        image_label.image = image
-
 
 def CheckUserInput(stringVars:dict, alarmVars:list):
 
@@ -68,8 +38,12 @@ def CheckUserInput(stringVars:dict, alarmVars:list):
     if not re.search(IP_RELU, ftp_ip):
         alarmVars[0].set("OA's IP is 10.96.X.X, FAB's IP is 10.97.X.X")
     else:
-        alarmVars[0].set("")
-    
+        if not Test_FTP(ftp_ip, stringVars['user'].get(), stringVars['password'].get()):
+            alarmVars[0].set("FTP IP, user or password are error!")
+            check_pass = False
+        else:
+            alarmVars[0].set("")
+
     if str.isdigit(stringVars['sensor'].get()):
         if int(stringVars['sensor'].get()) not in PI_USED_PIN:
             alarmVars[1].set("Pleaser study GPIO's documation!")
@@ -162,6 +136,18 @@ def write_json(file_name, stringVars:dict):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 
+def Test_FTP(ip, user, password):
+
+    try:
+        ftp = FTP()
+        ftp.connect(ip, 21)
+        ftp.login(user, password)
+        ftp.quit()
+        return True
+    except:
+        return False
+    
+
 class VideoCapture:
     def __init__(self):
         self.camera = PiCamera()
@@ -175,7 +161,49 @@ class VideoCapture:
         self.rawCapture.truncate(0)
         return image 
     
-    
-    
     def __del__(self):
         self.camera.close()
+
+
+def savePhoto(path, roi, frame):
+    if frame is not None:
+        images = glob(os.path.join("./condition_images", "condition_*.jpg"))
+        path.append(os.path.join("./condition_images", str(len(images) + ".jpg")))
+        roi.append([])
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join("./condition_images", str(len(images) + ".jpg")), frame)
+
+
+# Select image's roi and save result.
+def cutPhoto(path, roi, frame):
+    if frame is not None:
+        images = glob(os.path.join("./condition_images", "condition_*.jpg"))
+        path.append(os.path.join("./condition_images", str(len(images) + ".jpg")))
+        frame = cv2.cvtColor(frame)
+        cv2.imwrite(os.path.join("./condition_images", str(len(images) + ".jpg")), frame)
+
+        original_h, original_w = frame.shape[:2]
+        display_h = 480
+        display_w = 640
+        img = cv2.resize(frame, (display_w, display_h))
+        rects = []
+        while True:
+            cv2.imshow("image", img)
+            rect = cv2.selectROI("image", img, showCrosshair, fromCenter)
+            (x, y, w, h) = rect
+            img = cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 1)
+
+            x = x * (original_w / 640)
+            y = y * (original_h / 480)
+            w = w * (original_w / 640)
+            h = h * (original_h / 480)
+
+            rects.append([int(x), int(y), int(w), int(h)])
+
+            cv2.destroyAllWindows()
+            key = cv2.waitKey(0) & 0xFF
+
+            if key == ord('q'):
+                break
+
+        roi.append(rects)
