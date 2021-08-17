@@ -25,50 +25,52 @@ def limitInputDigital(P):
     else:
         return False
 
-def CheckUserInput(stringVars:dict, alarmVars:list):
+def CheckUserInput(stringVars:dict):
 
     check_pass = True
 
     if len(stringVars['Project_name'].get()) == 0 or len(stringVars["FTP_IP"].get()) == 0 or\
             len(stringVars["user"].get()) == 0 or len(stringVars["password"].get()) == 0:
         check_pass = False
-
-    time_text = ""
+    
     ftp_ip = stringVars['FTP_IP'].get()
     if not re.search(IP_RELU, ftp_ip):
-        alarmVars[0].set("OA's IP is 10.96.X.X, FAB's IP is 10.97.X.X")
-    else:
-        if not Test_FTP(ftp_ip, stringVars['user'].get(), stringVars['password'].get()):
-            alarmVars[0].set("FTP IP, user or password are error!")
-            check_pass = False
-        else:
-            alarmVars[0].set("")
-
-    if str.isdigit(stringVars['sensor'].get()):
-        if int(stringVars['sensor'].get()) not in PI_USED_PIN:
-            alarmVars[1].set("Pleaser study GPIO's documation!")
-            check_pass = False
-    elif  len(stringVars['sensor'].get()) == 0:
-        pass
-    else:
-        if not str.isdigit(stringVars['sensor'].get()):
-            alarmVars[1].set("IR sensor only key in digit!")
-            check_pass = False
+       msg.showwarning("Input error", "The FTP IP isn't OA or FAB.")
+    #else:
+    #    if not Test_FTP(ftp_ip, stringVars['user'].get(), stringVars['password'].get()):
+    #        alarmVars[0].set("FTP IP, user or password are error!")
+    #        check_pass = False
+    #    else:
+    #        alarmVars[0].set("")
     
+    # 0 is hardware, 1 is software
+    if stringVars["condition"].get() == 0:
+        if stringVars['sensor'].get() == "Choose Sensor Pin":
+            msg.showerror("Input error", "Sensor Pin must set!")
+            check_pass = False
+    elif stringVars["condition"].get() == 0:
+        if stringVars['path'] is None:
+            msg.showerror("Input error", "Must save or cut image")
+            check_pass = False
+            
     if str.isdigit(stringVars['video_time'].get()) or len(stringVars['video_time'].get()) == 0:
         pass
     else:
-        time_text += "Video time must is digit!"
+        msg.showerror("Input error", "Video time must is digit!")
         check_pass = False
     
     if str.isdigit(stringVars['interval_time'].get()) or len(stringVars['interval_time'].get()) == 0:
         pass
     else:
-        time_text += " delay time must is digit!"
+        msg.showerror("Input error", "Interval time must is digit!")
         check_pass = False
     
-    if len(time_text) > 0:
-        alarmVars[2].set(time_text)
+    if str.isdigit(stringVars['delay_time'].get()) or len(stringVars['delay_time'].get()) == 0:
+        pass
+    else:
+        msg.showerror("Input error", "Delay time must is digit!")
+        check_pass = False
+    
     
     if check_pass:
         show_text = "Please check the following information\nProject Name:{}\nFTP IP:{}\nUser:{}\nPassword:{}\n".format(stringVars['Project_name'].get(), ftp_ip, stringVars["user"].get(), stringVars['password'].get())
@@ -77,23 +79,27 @@ def CheckUserInput(stringVars:dict, alarmVars:list):
         elif stringVars["method"].get() == 1:
             show_text += "Method:Video\n"
 
-        if len(stringVars['path'].get()) > 0:
-            show_text += "Path:{}\n".format(stringVars['path'].get())
+        if stringVars['path'] is not None:
+            show_text += "Path:{}\n".format(stringVars['path'])
         
-        if len(stringVars['sensor'].get()) > 0:
+        if stringVars['roi'] is not None:
+            show_text += "ROI: Use {} roi".format(len(stringVars['roi']))
+        
+        if stringVars['sensor'].get() != "Choose Sensor Pin":
             show_text += "Sensor PIN:{}\n".format(stringVars['sensor'].get())
         
         if len(stringVars['video_time'].get()) > 0:
             show_text += "Video time:{}\n".format(stringVars['video_time'].get())
         
         if len(stringVars['interval_time'].get()) > 0:
-            show_text += "Delay time:{}".format(stringVars['interval_time'].get())
+            show_text += "Interval time:{}".format(stringVars['interval_time'].get())
+        
+        if len(stringVars['delay_time'].get()) > 0:
+            show_text += "Delay time:{}".format(stringVars['Delay_time'].get())
 
         MsgBox = msg.askyesno("Created Check", show_text)
         if MsgBox:
             write_json(stringVars['Project_name'].get() + ".json", stringVars)
-    else:
-        msg.showerror("Create error", "Please check data.")
         
 
 def write_json(file_name, stringVars:dict):
@@ -108,18 +114,18 @@ def write_json(file_name, stringVars:dict):
         data["method"] = "image"
     elif stringVars["method"].get() == 1:
         data["method"] = "video"
-
-    if len(stringVars["path"].get()) == 0:
-        data["Used_condition"] = False
-    else:
-        data["Used_condition"] = True
-        data["Condition_path"] = stringVars["path"].get()
     
-    if len(stringVars["sensor"].get()) == 0:
-        data["sensor"] = False
-    else:
-        data["sensor"] = True
-        data["pin"] = int(stringVars["sensor"].get())
+    if stringVars["condition"].get() == 0:
+        data["trigger"] = "hardware"
+        data["sensor"] = stringVars["sensor"].get()
+    elif stringVars["condition"].get() == 1:
+        data["trigger"] = "software"
+        data["path"] = stringVars["path"]
+        if stringVars["roi"] is None:
+            data["Used_roi"] = False
+        else:
+            data["Used_roi"] = True
+            data["roi"] = stringVars["roi"]
     
     if data['method'] == "video":
         if len(stringVars["video_time"].get()) == 0:
@@ -128,9 +134,14 @@ def write_json(file_name, stringVars:dict):
             data["video_time"] = int(stringVars["video_time"].get())
     
     if len(stringVars["interval_time"].get()) == 0:
+        data["interval"] = 0
+    else:
+         data["interval"] = int(stringVars["interval_time"].get())
+    
+    if len(stringVars["delay_time"].get()) == 0:
         data["delay"] = 0
     else:
-         data["delay"] = int(stringVars["interval_time"].get())
+         data["delay"] = int(stringVars["delay_time"].get())
         
     with open(file_name, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
@@ -164,31 +175,31 @@ class VideoCapture:
         self.camera.close()
 
 
-def savePhoto(path, frame):
+def savePhoto(frame, list_path):
     if frame is not None:
         images = glob(os.path.join("./condition_images", "condition_*.jpg"))
         path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg"), frame)
-
-
+        cv2.imwrite(path, frame)
+        list_path.append(path)
+    
 # Select image's roi and save result.
-def cutPhoto(path, roi, frame):
+def cutPhoto(frame):
+    
     if frame is not None:
-        
         # save image
         images = glob(os.path.join("./condition_images", "condition_*.jpg"))
         path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg"), frame)
+        cv2.imwrite(path, frame)
 
-        original_h, original_w = frame.shape[:2]
+        original_w, original_h = frame.shape[:2]
         display_h = 480
         display_w = 640
         rate_w = original_w / 640
         rate_h = original_h / 480
         draw = drawRoI(rate_w, rate_h)
-        img = cv2.resize(frame, (display_h, display_w))
+        img = cv2.resize(frame, (display_w, display_h))
         draw.call(img)
         while True:
             cv2.imshow("Cut Image", draw.show_image())
@@ -198,8 +209,9 @@ def cutPhoto(path, roi, frame):
             if key == ord('q'):
                 cv2.destroyAllWindows()
                 break
-        roi.append(draw.get_rectangle())
-
+        roi = draw.get_rectangle()
+        return path, roi
+    return None, None
 
 # Implement selectROI
 class drawRoI:
@@ -231,7 +243,14 @@ class drawRoI:
             self.drawing = False
             self.temp_image = self.clone_image
             self.rects.append([int(self.xmin * self.rate_w), int(self.ymin * self.rate_h), int(self.xmax * self.rate_w), int(self.ymax * self.rate_h)])
-
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            if len(self.rects) > 0:
+                self.rects.pop()
+                self.clone_image = self.original_image.copy()
+                for rect in self.rects:
+                    cv2.rectangle(self.clone_image, (int(rect[0]/self.rate_w), int(rect[1]/self.rate_h)), (int(rect[2]/self.rate_w), int(rect[3]/self.rate_h)), (0, 0, 255), 2)
+                self.temp_image = self.clone_image
+                
     def show_image(self):
         return self.clone_image
 
