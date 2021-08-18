@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image
-from GUI_commond import  CheckUserInput, VideoCapture, drawRoI
+from GUI_commond import  CheckUserInput, drawRoI, VideoCaptureWebCamera
 from PIL import ImageTk, Image
 import cv2
 import os
@@ -22,10 +22,12 @@ class collectImageGUI:
         self.windows = tk.Tk()
         self.windows.title("AUO L7B影像蒐集")
         self.windows.geometry("{}x{}".format(width, height))
-        self.camera = VideoCapture()
+        self.camera = VideoCaptureWebCamera()
         self.image_width = 0
         self.image_height = 0
         self.rate = 1
+        self.rate_w = 1
+        self.rate_h = 1
         self.path = None
         self.roi = None
         self.photo = None
@@ -173,7 +175,7 @@ class collectImageGUI:
             frame = cv2.cvtColor(self.photo, cv2.COLOR_RGB2BGR)
             cv2.imwrite(self.user_choice_dict["path"] , frame)
             
-            original_w, original_h = frame.shape[:2]
+            original_h, original_w = frame.shape[:2]
             display_h = 480
             display_w = 640
             if mode == "save":
@@ -196,34 +198,6 @@ class collectImageGUI:
                         cv2.destroyAllWindows()
                         break
                 self.user_choice_dict["roi"] = draw.get_rectangle()
-            
-    # Select image's roi and save result.
-    def cut_photo(self):
-        
-        if self.photo is not None:
-            # save image
-            images = glob(os.path.join("./condition_images", "condition_*.jpg"))
-            self.user_choice_dict["path"] = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
-            frame = cv2.cvtColor(self.photo, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(self.user_choice_dict["path"], frame)
-    
-            original_w, original_h = frame.shape[:2]
-            display_h = 480
-            display_w = 640
-            rate_w = original_w / 640
-            rate_h = original_h / 480
-            draw = drawRoI(rate_w, rate_h)
-            img = cv2.resize(frame, (display_w, display_h))
-            draw.call(img)
-            while True:
-                cv2.imshow("Cut Image", draw.show_image())
-                key = cv2.waitKey(1)
-                
-                # Close program with keyboard 'q'
-                if key == ord('q'):
-                    cv2.destroyAllWindows()
-                    break
-            self.user_choice_dict["roi"] = draw.get_rectangle()
                         
 
 if __name__ == "__main__":

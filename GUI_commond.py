@@ -1,13 +1,9 @@
 from tkinter import messagebox as msg
-from PIL import ImageTk, Image
-from tkinter import filedialog
 import re
 import json
 import cv2
-import os
-from glob import glob
-from picamera.array import PiRGBArray
-from picamera import PiCamera
+#from picamera.array import PiRGBArray
+#from picamera import PiCamera
 from time import sleep
 from ftplib import FTP
 
@@ -95,7 +91,7 @@ def CheckUserInput(stringVars:dict):
             show_text += "Interval time:{}".format(stringVars['interval_time'].get())
         
         if len(stringVars['delay_time'].get()) > 0:
-            show_text += "Delay time:{}".format(stringVars['Delay_time'].get())
+            show_text += "Delay time:{}".format(stringVars['delay_time'].get())
 
         MsgBox = msg.askyesno("Created Check", show_text)
         if MsgBox:
@@ -174,44 +170,18 @@ class VideoCapture:
     def __del__(self):
         self.camera.close()
 
-
-def savePhoto(frame, list_path):
-    if frame is not None:
-        images = glob(os.path.join("./condition_images", "condition_*.jpg"))
-        path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path, frame)
-        list_path.append(path)
+class VideoCaptureWebCamera():
     
-# Select image's roi and save result.
-def cutPhoto(frame):
-    
-    if frame is not None:
-        # save image
-        images = glob(os.path.join("./condition_images", "condition_*.jpg"))
-        path = os.path.join("./condition_images", "condition_" + str(len(images)) + ".jpg")
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path, frame)
+    def __init__(self):
+        self.camers = cv2.VideoCapture(0)
 
-        original_w, original_h = frame.shape[:2]
-        display_h = 480
-        display_w = 640
-        rate_w = original_w / 640
-        rate_h = original_h / 480
-        draw = drawRoI(rate_w, rate_h)
-        img = cv2.resize(frame, (display_w, display_h))
-        draw.call(img)
-        while True:
-            cv2.imshow("Cut Image", draw.show_image())
-            key = cv2.waitKey(1)
-            
-            # Close program with keyboard 'q'
-            if key == ord('q'):
-                cv2.destroyAllWindows()
-                break
-        roi = draw.get_rectangle()
-        return path, roi
-    return None, None
+    def get_frame(self):
+        cap, frame = self.camers.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        return frame
+
+    def __del__(self):
+        self.camers.release()    
 
 # Implement selectROI
 class drawRoI:
