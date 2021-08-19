@@ -1,4 +1,5 @@
 from tkinter import messagebox as msg
+import os
 import re
 import json
 import cv2
@@ -6,6 +7,7 @@ import cv2
 #from picamera import PiCamera
 from time import sleep
 from ftplib import FTP
+from selectData import collect_Data
 
 #################################################
 IP_RELU = "^10.(96|97).+((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
@@ -15,11 +17,12 @@ showCrosshair = False # Don't display grid
 fromCenter = False # Select top-left to button-right
 #################################################
 
-def limitInputDigital(P):
-    if str.isdigit(P) or P == '':
-        return True
+def executeCollectData(json_file, camera):
+    if os.path.exists(json_file):
+        camera.__del__()
+        collect_Data(json_file)
     else:
-        return False
+        msg.showerror("Don't execute", "The file isn't existing!\nPlease create new file.")
 
 def CheckUserInput(stringVars:dict):
 
@@ -79,7 +82,7 @@ def CheckUserInput(stringVars:dict):
             show_text += "Path:{}\n".format(stringVars['path'])
         
         if stringVars['roi'] is not None:
-            show_text += "ROI: Use {} roi".format(len(stringVars['roi']))
+            show_text += "ROI: Use {} roi\n".format(len(stringVars['roi']))
         
         if stringVars['sensor'].get() != "Choose Sensor Pin":
             show_text += "Sensor PIN:{}\n".format(stringVars['sensor'].get())
@@ -88,17 +91,21 @@ def CheckUserInput(stringVars:dict):
             show_text += "Video time:{}\n".format(stringVars['video_time'].get())
         
         if len(stringVars['interval_time'].get()) > 0:
-            show_text += "Interval time:{}".format(stringVars['interval_time'].get())
+            show_text += "Interval time:{}\n".format(stringVars['interval_time'].get())
         
         if len(stringVars['delay_time'].get()) > 0:
-            show_text += "Delay time:{}".format(stringVars['delay_time'].get())
+            show_text += "Delay time:{}\n".format(stringVars['delay_time'].get())
 
-        MsgBox = msg.askyesno("Created Check", show_text)
-        if MsgBox:
-            write_json(stringVars['Project_name'].get() + ".json", stringVars)
-        
+        msg_box = msg.askyesno("Created Check", show_text)
+        if msg_box:
+            if os.path.exists(stringVars['Project_name'].get() + ".json"):
+                exist_box = msg.askyesno("Exist", "The Json file is existing!\nDo you want to cover?")
+                if exist_box:
+                    writeJson(stringVars['Project_name'].get() + ".json", stringVars)
+            else:
+                writeJson(stringVars['Project_name'].get() + ".json", stringVars)
 
-def write_json(file_name, stringVars:dict):
+def writeJson(file_name, stringVars:dict):
 
     data = {}
     data["project name"] = stringVars['Project_name'].get()
@@ -173,7 +180,7 @@ class VideoCapture:
 class VideoCaptureWebCamera():
     
     def __init__(self):
-        self.camers = cv2.VideoCapture(0)
+        self.camers = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
 
     def get_frame(self):
         cap, frame = self.camers.read()

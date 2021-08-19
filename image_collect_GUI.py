@@ -1,11 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog as fd
 from PIL import ImageTk, Image
-from GUI_commond import  CheckUserInput, drawRoI, VideoCaptureWebCamera
+from GUI_commond import  CheckUserInput, drawRoI, VideoCaptureWebCamera, executeCollectData
 from PIL import ImageTk, Image
 import cv2
 import os
 from glob import glob
+import json
 #from picamera.array import PiRGBArray
 #from picamera import PiCamera
 
@@ -119,19 +121,23 @@ class collectImageGUI:
         self.video_time_label = tk.Label(self.other_frame, text="Every video time(sec)", font=TITLE_NAME_FONT)
         self.video_time_label.grid(row=0, column=0)
         self.video_time_var = tk.StringVar()
+        self.video_time_var.set(60)
         self.video_time_text = tk.Entry(self.other_frame, textvariable=self.video_time_var)
         self.video_time_text.grid(row=0, column=1)
         self.interval_time_label = tk.Label(self.other_frame, text="Interval time(sec)", font=TITLE_NAME_FONT)
         self.interval_time_label.grid(row=1, column=0)
         self.interval_time_var = tk.StringVar()
+        self.interval_time_var.set(0)
         self.interval_time_text = tk.Entry(self.other_frame, textvariable=self.interval_time_var)
         self.interval_time_text.grid(row=1, column=1)
         self.delay_time_label = tk.Label(self.other_frame, text="Delay time(sec)", font=TITLE_NAME_FONT)
         self.delay_time_label.grid(row=2, column=0)
         self.delay_time_var = tk.StringVar(0)
+        self.delay_time_var.set(0)
         self.delay_time_text = tk.Entry(self.other_frame, textvariable=self.delay_time_var)
         self.delay_time_text.grid(row=2, column=1)
         self.other_frame.pack()
+        
         
         self.user_choice_dict = {
             "Project_name": self.project_var,
@@ -148,8 +154,19 @@ class collectImageGUI:
             "condition":self.condition_value
         }
 
-        self.produce_button = tk.Button(self.windows, text="Create", font=BUTTON_FONT, command=lambda : CheckUserInput(self.user_choice_dict))
-        self.produce_button.pack()
+        # Load and create JSON file and execute collect data using JSON file.
+        self.button_frame = tk.Frame(self.windows, width=70, height=1)
+        self.save_button = tk.Button(self.button_frame, text="Save", height=1, width=5, font=BUTTON_FONT, command=lambda : CheckUserInput(self.user_choice_dict))
+        self.save_button.grid(row=0, column=0)
+        self.load_button = tk.Button(self.button_frame, text="Load", height=1, width=5, font=BUTTON_FONT, command=self.load_file)
+        self.load_button.grid(row=0, column=1)
+        self.execute_button = tk.Button(self.button_frame, text="Execute", height=1, width=5, font=BUTTON_FONT, command=lambda:executeCollectData(self.project_var.get()+".json", self.camera))
+        self.execute_button.grid(row=0, column=2)
+        col_count, row_count = self.button_frame.grid_size()
+        for col in range(col_count):
+            
+            self.button_frame.grid_columnconfigure(col, minsize=100)
+        self.button_frame.pack()
         
     def update_condition(self):
         
@@ -198,6 +215,35 @@ class collectImageGUI:
                         cv2.destroyAllWindows()
                         break
                 self.user_choice_dict["roi"] = draw.get_rectangle()
+    
+    def load_file(self):
+        filename = fd.askopenfilename(filetypes=[('json files',"*.json")])
+        if len(filename) > 0:
+            with open(filename, "r", encoding='utf-8') as f:
+                array_list = json.load(f)
+                self.project_var.set(array_list['project name'])
+                self.FTP_var.set(array_list['FTP'])
+                self.user_var.set(array_list['user'])
+                self.password_var.set(array_list['password'])
+                
+                if array_list['method'] == 'image':
+                    self.method_value.set(0)
+                else:
+                    self.method_value.set(1)
+                    self.video_time_var.set(array_list['video_time'])
+                
+                if array_list['trigger'] == 'software':
+                    self.condition_value.set(1)
+
+                    self.path = array_list['path']
+                    if array_list['Used_roi']:
+                        self.roi = array_list['roi']
+                else:
+                    self.condition_value.set(0)
+                
+                self.interval_time_var.set(array_list['interval'])
+                self.delay_time_var.set(array_list['delay'])
+
                         
 
 if __name__ == "__main__":

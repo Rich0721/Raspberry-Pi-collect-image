@@ -1,4 +1,3 @@
-from typing_extensions import TypeGuard
 import cv2
 import os
 import json
@@ -180,10 +179,10 @@ def collect_Data(json_file):
                 else:
                     video_storage(cameras, last_time=last_time, now_time=now_time, ftp=ftp, interval_time=interval_time, video_time=video_time)
 
-            
+        
         now_time = datetime.now()
         ftp.cwd("../")
-                
+        cv2.imshow("Execute", frame)
         
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
@@ -197,12 +196,4 @@ def collect_Data(json_file):
 
 
 
-collect_Data("Test_video_cut.json")
-
-'''
-ftp = connect_FTP(IP="10.97.126.9", user="imt_ftp", password="imt$ftp")
-if not "Test_RICH" in ftp.nlst():
-    ftp.mkd("Test_RICH")
-else:
-    print("{} exists!".format("Test_RICH"))
-'''
+#collect_Data("Test_video_cut.json")
