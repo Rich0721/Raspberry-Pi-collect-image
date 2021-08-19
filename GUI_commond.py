@@ -3,10 +3,11 @@ import os
 import re
 import json
 import cv2
-
+from selectData import collectImageOrVideo
 from time import sleep
 from ftplib import FTP
-from selectData import collect_Data,collectDataRaspberryPi
+from os.path import exists
+
 
 #################################################
 IP_RELU = "^10.(96|97).+((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
@@ -17,10 +18,25 @@ showCrosshair = False # Don't display grid
 fromCenter = False # Select top-left to button-right
 #################################################
 
-def executeCollectData(json_file, camera):
-    if os.path.exists(json_file):
+def executeCollectData(json_file, camera, os, windows):
+    print(json_file)
+    if exists(json_file):
         camera.__del__()
-        collectDataRaspberryPi(json_file)
+        windows.destroy()
+        collect = collectImageOrVideo(json_file=json_file, os=os)
+        collect.collectWindows()
+        from image_collect_GUI import collectImageGUI
+        GUI = collectImageGUI(os=os)
+        
+        
+        '''
+        if os == 'pi':
+            from selectData import collectDataRaspberryPi
+            collectDataRaspberryPi(json_file)
+        else:
+            from selectData import collectData
+            collectData()
+        '''
     else:
         msg.showerror("Don't execute", "The file isn't existing!\nPlease create new file.")
 

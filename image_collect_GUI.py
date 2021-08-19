@@ -26,6 +26,12 @@ class collectImageGUI:
         if os == 'pi':
             from GUI_commond import VideoCapture
             self.camera = VideoCapture()
+        elif os == 'windows':
+            from GUI_commond import VideoCaptureWebCamera
+            self.camera = VideoCaptureWebCamera()
+        else:
+            raise ValueError("os must is `pi` or `windows`")
+        self.os = os
         self.image_width = 0
         self.image_height = 0
         self.rate = 1
@@ -154,14 +160,14 @@ class collectImageGUI:
             "method": self.method_value,
             "condition":self.condition_value
         }
-
+        
         # Load and create JSON file and execute collect data using JSON file.
         self.button_frame = tk.Frame(self.windows, width=70, height=1)
         self.save_button = tk.Button(self.button_frame, text="Save", height=1, width=5, font=BUTTON_FONT, command=lambda : CheckUserInput(self.user_choice_dict))
         self.save_button.grid(row=0, column=0)
         self.load_button = tk.Button(self.button_frame, text="Load", height=1, width=5, font=BUTTON_FONT, command=self.load_file)
         self.load_button.grid(row=0, column=1)
-        self.execute_button = tk.Button(self.button_frame, text="Execute", height=1, width=5, font=BUTTON_FONT, command=lambda:executeCollectData(self.project_var.get()+".json", self.camera))
+        self.execute_button = tk.Button(self.button_frame, text="Execute", height=1, width=5, font=BUTTON_FONT, command=lambda:executeCollectData(self.project_var.get()+".json", self.camera, self.os, self.windows))
         self.execute_button.grid(row=0, column=2)
         col_count, row_count = self.button_frame.grid_size()
         for col in range(col_count):
@@ -241,16 +247,15 @@ class collectImageGUI:
                 if array_list['trigger'] == 'software':
                     self.condition_value.set(1)
 
-                    self.path = array_list['path']
+                    self.user_choice_dict['path'] = array_list['path']
                     if array_list['Used_roi']:
-                        self.roi = array_list['roi']
+                        self.user_choice_dict['roi'] = array_list['roi']
                 else:
                     self.condition_value.set(0)
                 
                 self.interval_time_var.set(array_list['interval'])
                 self.delay_time_var.set(array_list['delay'])
-
-                        
+            
 
 if __name__ == "__main__":
-    GUI = collectImageGUI() 
+    GUI = collectImageGUI(os='windows') 
