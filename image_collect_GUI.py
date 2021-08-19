@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
 from PIL import ImageTk, Image
-from GUI_commond import  CheckUserInput, drawRoI, VideoCaptureWebCamera, executeCollectData
+from GUI_commond import  CheckUserInput, drawRoI, executeCollectData
 from PIL import ImageTk, Image
 import cv2
 import os
@@ -14,17 +14,18 @@ import json
 ###########################################
 TITLE_NAME_FONT = ('Times', 16, 'bold')
 BUTTON_FONT = ('Times', 16)
-ALARM_FONT = ("Times", 16,  "bold")
 ###########################################
 
 class collectImageGUI:
 
-    def __init__(self, width=600, height=800):
+    def __init__(self, width=600, height=800, os='pi'):
         
         self.windows = tk.Tk()
         self.windows.title("AUO L7B影像蒐集")
         self.windows.geometry("{}x{}".format(width, height))
-        self.camera = VideoCaptureWebCamera()
+        if os == 'pi':
+            from GUI_commond import VideoCapture
+            self.camera = VideoCapture()
         self.image_width = 0
         self.image_height = 0
         self.rate = 1
@@ -175,12 +176,17 @@ class collectImageGUI:
             image = ImageTk.PhotoImage(image)
             self.photo = None
         else:
-            frame = self.camera.get_frame()
-            h, w = frame.shape[:2]
-            self.photo = frame
-            self.rate = 480 / w
-            image = cv2.resize(frame, (int(self.rate*w), int(self.rate*h)))
-            image = ImageTk.PhotoImage(image=Image.fromarray(image))
+            try:
+                frame = self.camera.get_frame()
+                h, w = frame.shape[:2]
+                self.photo = frame
+                self.rate = 480 / w
+                image = cv2.resize(frame, (int(self.rate*w), int(self.rate*h)))
+                image = ImageTk.PhotoImage(image=Image.fromarray(image))
+            except:
+                image = Image.open("./basic_image/pi_GPIO.png").resize((480, 270))
+                image = ImageTk.PhotoImage(image)
+                self.photo = None
         self.condition_image.configure(image=image)
         self.condition_image.image = image
         self.windows.after(self.delay, self.update_condition)

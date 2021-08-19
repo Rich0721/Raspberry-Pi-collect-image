@@ -3,16 +3,16 @@ import os
 import re
 import json
 import cv2
-#from picamera.array import PiRGBArray
-#from picamera import PiCamera
+
 from time import sleep
 from ftplib import FTP
-from selectData import collect_Data
+from selectData import collect_Data,collectDataRaspberryPi
 
 #################################################
 IP_RELU = "^10.(96|97).+((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
-PI_USED_PIN = [3, 5, 7, 8, 11, 12, 13, 15, 16, 18, 19, 21, 22, 23, 24, 26, 29, 31, \
-                32, 33, 35, 36, 37, 38, 40]
+GPIO_PIN = {'3':2, '5':3, '7':4, '11':17, '13':27, '15':22,'19':10, '21':9, '23':11\
+            ,'29':5, '31':6, '33':33, '35':19, '37':26, '12':18, '25':8, '26':7, '32':12,\
+            '36':16, '38':20, '40':21}
 showCrosshair = False # Don't display grid
 fromCenter = False # Select top-left to button-right
 #################################################
@@ -20,7 +20,7 @@ fromCenter = False # Select top-left to button-right
 def executeCollectData(json_file, camera):
     if os.path.exists(json_file):
         camera.__del__()
-        collect_Data(json_file)
+        collectDataRaspberryPi(json_file)
     else:
         msg.showerror("Don't execute", "The file isn't existing!\nPlease create new file.")
 
@@ -120,7 +120,7 @@ def writeJson(file_name, stringVars:dict):
     
     if stringVars["condition"].get() == 0:
         data["trigger"] = "hardware"
-        data["sensor"] = stringVars["sensor"].get()
+        data["sensor"] = GPIO_PIN[stringVars["sensor"].get()]
     elif stringVars["condition"].get() == 1:
         data["trigger"] = "software"
         data["path"] = stringVars["path"]
@@ -163,6 +163,8 @@ def Test_FTP(ip, user, password):
 
 class VideoCapture:
     def __init__(self):
+        from picamera.array import PiRGBArray
+        from picamera import PiCamera
         self.camera = PiCamera()
         self.camera.framerate = 32
         self.rawCapture = PiRGBArray(self.camera)
