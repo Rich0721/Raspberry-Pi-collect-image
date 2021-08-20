@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
+from tkinter import font
 from PIL import ImageTk, Image
 from GUI_commond import  CheckUserInput, drawRoI, executeCollectData
 from PIL import ImageTk, Image
@@ -121,6 +122,12 @@ class collectImageGUI:
                         "23", "24", "26", "29", "31", "32", "33", "35", "36", "37", "38", "40"])
         self.sensor_text.current(0)
         self.sensor_text.grid(row=0, column=1)
+        self.sensor_condition_var = tk.StringVar()
+        self.sensor_condition_label = tk.Label(self.sensor_frame, text="Collected image using sensor", font=TITLE_NAME_FONT)
+        self.sensor_condition_label.grid(row=1, column=0)
+        self.sensor_condition_box = ttk.Combobox(self.sensor_frame, textvariable=self.sensor_condition_var, values=["Choose condition", "Masked", "Unmasked"])
+        self.sensor_condition_box.current(0)
+        self.sensor_condition_box.grid(row=1, column=1)
         self.sensor_frame.pack()
 
         # other set
@@ -128,7 +135,7 @@ class collectImageGUI:
         self.video_time_label = tk.Label(self.other_frame, text="Every video time(sec)", font=TITLE_NAME_FONT)
         self.video_time_label.grid(row=0, column=0)
         self.video_time_var = tk.StringVar()
-        self.video_time_var.set(60)
+        self.video_time_var.set(5)
         self.video_time_text = tk.Entry(self.other_frame, textvariable=self.video_time_var)
         self.video_time_text.grid(row=0, column=1)
         self.interval_time_label = tk.Label(self.other_frame, text="Interval time(sec)", font=TITLE_NAME_FONT)
@@ -158,7 +165,8 @@ class collectImageGUI:
             "video_time": self.video_time_var,
             "interval_time": self.interval_time_var,
             "method": self.method_value,
-            "condition":self.condition_value
+            "condition":self.condition_value,
+            "sensor_condition":self.sensor_condition_var
         }
         
         # Load and create JSON file and execute collect data using JSON file.
@@ -258,4 +266,6 @@ class collectImageGUI:
             
 
 if __name__ == "__main__":
+    if not os.path.exists("condition_images"):
+        os.mkdir("condition_images")
     GUI = collectImageGUI(os='windows') 

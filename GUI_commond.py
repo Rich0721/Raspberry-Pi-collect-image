@@ -24,7 +24,7 @@ def executeCollectData(json_file, camera, os, windows):
         camera.__del__()
         windows.destroy()
         collect = collectImageOrVideo(json_file=json_file, os=os)
-        collect.collectWindows()
+        collect.collect()
         from image_collect_GUI import collectImageGUI
         GUI = collectImageGUI(os=os)
         
@@ -63,7 +63,12 @@ def CheckUserInput(stringVars:dict):
         if stringVars['sensor'].get() == "Choose Sensor Pin":
             msg.showerror("Input error", "Sensor Pin must set!")
             check_pass = False
-    elif stringVars["condition"].get() == 0:
+        
+        if stringVars['sensor_condition'].get() == "Choose condition":
+            msg.showerror("Input error", "Sensor condition must set!")
+            check_pass = False
+
+    elif stringVars["condition"].get() == 1:
         if stringVars['path'] is None:
             msg.showerror("Input error", "Must save or cut image")
             check_pass = False
@@ -102,6 +107,9 @@ def CheckUserInput(stringVars:dict):
         
         if stringVars['sensor'].get() != "Choose Sensor Pin":
             show_text += "Sensor PIN:{}\n".format(stringVars['sensor'].get())
+        
+        if stringVars['sensor_condition'].get() != "Choose condition":
+            show_text += "Sensor condition:{}\n".format(stringVars['sensor_condition'])
         
         if len(stringVars['video_time'].get()) > 0:
             show_text += "Video time:{}\n".format(stringVars['video_time'].get())

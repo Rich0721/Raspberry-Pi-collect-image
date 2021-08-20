@@ -22,177 +22,6 @@ resize_h, reize_w = 0, 0
 video_path = None
 ###################################################
 
-
-def FTP_image(frame, image_file, ftp):
-    cv2.imwrite(image_file, frame)
-    #im = open(image_file, 'rb')
-    #ftp.storbinary("STOR {}".format(image_file), im)
-    #im.close()
-    #os.remove(image_file)
-
-    
-def FTPRaspberryPiVideo(video_file, ftp):
-    
-    im = open(video_file, 'rb')
-    ftp.storbinary("STOR {}".format(video_file), im)
-    im.close()
-    os.remove(video_file)
-
-def caluate_SSIM(frame, condition):
-    grayA = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    grayB = cv2.cvtColor(condition, cv2.COLOR_BGR2GRAY)
-    score = ssim(grayA, grayB)
-    return score
-
-
-def caluate_match(frame, condition, rois):
-
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray_condition = cv2.cvtColor(condition, cv2.COLOR_BGR2GRAY)
-    storages = []
-
-    for roi in rois:
-        template = gray_condition[roi[1]:roi[3], roi[0]:roi[2]]
-        
-        res = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
-        
-        loc = np.where( res >= 0.5)
-        
-        if loc[0].size > 0 and loc[1].size > 0:
-            xmin = max(loc[1])
-            ymin = max(loc[0])
-
-            storages.append([xmin, ymin])
-    
-    if len(storages) == len(rois):
-        return True
-    return False
-
-
-
-def videoStorageRaspberryPi(camera, last_time, now_time, ftp, interval_time, video_time):
-    if last_time is None:
-        
-        FTPRaspberryPiVideo(camera, video_time=video_time, video_file=now_time.strftime("%H%M%S")+".mp4", ftp=ftp)
-        last_time = now_time
-    else:
-        seconds = (now_time - last_time).seconds
-        if seconds >= interval_time:
-            FTPRaspberryPiVideo(camera, video_time=video_time, video_file=now_time.strftime("%H%M%S")+".mp4", ftp=ftp)
-            last_time = now_time    
-    return last_time
-
-
-def collectDataRaspberryPi(json_file):
-    settings = read_json(json_file)
-    ftp = None#connect_FTP(IP=settings['FTP'], user=settings["user"], password=settings['password'])
-    #ftp = FTP_mkdir(ftp, settings['project name'])
-    writer_video_flag = False
-    now_time = datetime.now()
-    last_time = None
-
-    video_time = 0 if settings['method'] == "image" else int(settings["video_time"])
-    interval_time = int(settings['interval'])
-    delay_time = int(settings['delay']) 
-    condition_image = cv2.imread(settings['path']) if settings['trigger'] == 'software' else None
-    
-    if condition_image is not None and settings['Used_roi']:
-        condition_roi = settings['roi']
-    else:
-        condition_roi = None
-        
-    global fps_numbers, video_fps, out, fourcc, resize_w, reisze_h, video_path
-    
-    camera = PiCamera()
-    #camera.framerate = 32
-    rawCapture = PiRGBArray(camera)
-    
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-        
-        today_folder = now_time.strftime("%Y-%m-%d")
-        image = frame.array
-        
-        #ftp = FTP_mkdir(ftp, today_folder)
-        if writer_video_flag:
-            image = frame.array
-            image = cv2.resize(image, (resize_w, resize_h))
-            out.write(image)
-            cv2.imshow("test", image)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
-                break
-            video_fps += 1
-            if video_fps >= fps_numbers:
-                writer_video_flag = False
-                video_fps = 0
-                out.release()
-                FTPRaspberryPiVideo(video_path, ftp)
-            rawCapture.truncate(0)
-            continue
-        
-        if condition_roi is None and condition_image is not None:
-            score = caluate_SSIM(image, condition_image)
-            
-            if score >= THRESHOLD:
-                if delay_time > 0:
-                    sleep(delay_time)
-                
-                if settings['method'] == "image":
-                    last_time = image_storage(image, last_time=last_time, now_time=now_time, ftp=ftp, interval_time=interval_time)
-                else:
-                    fps_numbers = FPS * video_time
-                    h, w = image.shape[:2]
-                    if h > 1080 and w > 1920:
-                        resize_w = 1920
-                        resize_h = 1080
-                    else:
-                        resize_w = w
-                        resize_h = h
-                    video_path = now_time.strftime("%H%M%S")+".mp4"
-                    out = cv2.VideoWriter(video_path, fourcc, FPS, (resize_w, resize_h))
-                    image = cv2.resize(image, (resize_w, resize_h))
-                    out.write(image)
-                    video_fps +=1
-                    writer_video_flag = True   
-        elif condition_roi is not None:
-            if caluate_match(image, condition_image, condition_roi):
-                if delay_time > 0:
-                    sleep(delay_time)
-                
-                if settings['method'] == "image":
-                    print("123")
-                    last_time = image_storage(image, last_time=last_time, now_time=now_time, ftp=ftp, interval_time=interval_time)
-                else:
-                    
-                    fps_numbers = FPS * video_time
-                    h, w = image.shape[:2]
-                    if h > 1080 and w > 1920:
-                        resize_w = 1920
-                        resize_h = 1080
-                    else:
-                        resize_w = w
-                        resize_h = h
-                    video_path = now_time.strftime("%H%M%S")+".mp4"
-                    out = cv2.VideoWriter(video_path, fourcc, FPS, (resize_w, resize_h))
-                    image = cv2.resize(image, (resize_w, resize_h))
-                    out.write(image)
-                    video_fps +=1
-                    writer_video_flag = True
-        
-        now_time = datetime.now()
-        #ftp.cwd("../")
-        cv2.imshow("Execute", image)
-        
-        key = cv2.waitKey(1) & 0xFF
-        rawCapture.truncate(0)
-        
-        if key == ord('q'):
-            break
-    
-    camera.close()
-    cv2.destroyAllWindows()
-
-
 class collectImageOrVideo:
     def __init__(self, json_file, os='pi'):
         
@@ -202,10 +31,14 @@ class collectImageOrVideo:
             from picamera import PiCamera
             self.camera = PiCamera()
             self.PiRGBArray = PiRGBArray(self.camera)
+            self.ssim = ssim
         elif os == 'windows':
             from skimage.measure import compare_ssim as ssim
+            self.ssim = ssim
             self.camera = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
-        
+        else:
+            raise ValueError("`os` must is `pi` or `windows`")
+        self.os = os
         self.settings = self.readJson(json_file)
         self.fps_numbers = 0
         self.video_fps = 0 # writer in video frame numbers 
@@ -214,13 +47,15 @@ class collectImageOrVideo:
         self.resize_h, self.resize_w = 0, 0
         self.path = None
         self.video_writer = False
+        self.image_writer = False
         self.FTPConnect()
         #self.ftp = self.FTPConnect()
         self.FTPMkdir(self.settings['project name'])
 
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
         self.interval_time = int(self.settings['interval'])
-        self.delay_time = int(self.settings['delay']) 
+        self.delay_time = int(self.settings['delay'])
+        self.trigger = self.settings['trigger']
         self.condition_image = cv2.imread(self.settings['path']) if self.settings['trigger'] == 'software' else None
 
         if self.condition_image is not None and self.settings['Used_roi']:
@@ -252,12 +87,17 @@ class collectImageOrVideo:
             #return None
     
     def FTPUpload(self):
-        im = open(self.path, 'rb')
-        self.ftp.storbinary("STOR {}".format(self.path), im)
-        im.close()
-        os.remove(self.path)
-        self.path = None
-    
+        try:
+            im = open(self.path, 'rb')
+            self.ftp.storbinary("STOR {}".format(self.path), im)
+            im.close()
+            print("Upload success!")
+            os.remove(self.path)
+            self.path = None
+        except:
+            print("Upload failed!")
+            pass
+
     def FTPMkdir(self, folder):
         if folder not in self.ftp.nlst():
             self.ftp.mkd(folder)
@@ -271,7 +111,7 @@ class collectImageOrVideo:
         storages = []
 
         if choice == 'SSIM':
-            score = ssim(gray_frame, self.condition_image_gray)
+            score = self.ssim(gray_frame, self.condition_image_gray)
             if score >= THRESHOLD:
                 return True
             else:
@@ -309,75 +149,82 @@ class collectImageOrVideo:
                 self.FTPUpload()
                 self.last_time = self.now_time
 
-    def videoStorage(self):
-        while self.video_fps < self.fps_numbers:
-            ret, frame = self.camera.read()
-            frame = cv2.resize(frame, (self.resize_w, self.resize_h))
-            self.out.write(frame)
-        self.out.release()
-        self.video_fps = 0
-        self.FTPUpload()
+    def videoStorage(self, frame):
+        frame = cv2.resize(frame, (self.resize_w, self.resize_h))
+        self.out.write(frame)
 
-    def collectWindows(self):
-        
-        #self.FTPMkdir(self.settings['project name'])
-        while True:
-            self.now_time = datetime.now()
-            ret, frame = self.camera.read()
-            today_folder = self.now_time.strftime("%Y-%m-%d")
-            self.FTPMkdir(today_folder)
-            
-            if self.condition_roi is None and self.condition_image is not None:
-                if self.caluateSSIMAndTemplate(frame, choice='SSIM'):
-                    if self.delay_time > 0:
-                        sleep(self.delay_time)
-                    
-                    if self.settings['method'] == 'image':
-                        ret, frame = self.camera.read()
-                        self.path = self.now_time.strftime("%H%M%S") + ".jpg"
-                        self.imageStorage(frame)
+    def judgeData(self, frame):
+        if self.image_writer:
+                self.image_writer = False
+                self.imageStorage(frame)
+        elif self.video_writer:
+            self.video_fps += 1
+            self.videoStorage(frame)
+            if self.video_fps >= self.fps_numbers:
+                self.video_writer = False
+                self.out.release()
+                self.video_fps = 0
+                self.FTPUpload() 
+        elif self.settings['trigger'] == 'software':
+            # trigger is software has 2 method that collect data
+            if self.condition_roi is None:
+                choice = "SSIM"
+            else:
+                choice = "Template"
+
+            if self.caluateSSIMAndTemplate(frame, choice=choice):
+                if self.delay_time > 0:
+                    sleep(self.delay_time)
+                
+                if self.settings['method'] == 'image':
+                    self.image_writer = True
+                    self.path = self.now_time.strftime("%H%M%S") + ".jpg"
+                else:
+                    self.path = self.now_time.strftime("%H%M%S") + ".mp4"
+                    h, w = frame.shape[:2]
+                    if h > 1080 and w >1920:
+                        self.resize_w = 1920
+                        self.resize_h = 1080
                     else:
-                        self.path = self.now_time.strftime("%H%M%S") + ".mp4"
-                        h, w = frame.shape[:2]
-                        if h > 1080 and w >1920:
-                            self.resize_w = 1920
-                            self.resize_h = 1080
-                        else:
-                            self.resize_w = w
-                            self.resize_h = h
-                        self.out = cv2.VideoWriter(self.path, self.fourcc, FPS, (self.resize_w, self.resize_h))
-                        self.fps_numbers = FPS * self.video_time
-                        self.videoStorage()
-            elif self.condition_roi is not None:
-                if self.caluateSSIMAndTemplate(frame, choice='Template'):
-                    if self.delay_time > 0:
-                        sleep(self.delay_time)
-                    
-                    if self.settings['method'] == 'image':
-                        ret, frame = self.camera.read()
-                        self.path = self.now_time.strftime("%H%M%S") + ".jpg"
-                        self.imageStorage(frame)
-                    else:
-                        self.path = self.now_time.strftime("%H%M%S") + ".mp4"
-                        h, w = frame.shape[:2]
-                        if h > 1080 and w >1920:
-                            self.resize_w = 1920
-                            self.resize_h = 1080
-                        else:
-                            self.resize_w = w
-                            self.resize_h = h
-                        self.out = cv2.VideoWriter(self.path, self.fourcc, FPS, (self.resize_w, self.resize_h))
-                        self.fps_numbers = FPS * self.video_time
-                        self.videoStorage()
-            self.ftp.cwd("../")
-            
-            #ftp.cwd("../")
-            cv2.imshow("Execute", frame)
-            
-            key = cv2.waitKey(1) & 0xFF
-            #rawCapture.truncate(0)
-            
-            if key == ord('q'):
-                break
-        cv2.destroyAllWindows()
-        self.camera.release()
+                        self.resize_w = w
+                        self.resize_h = h
+                    self.out = cv2.VideoWriter(self.path, self.fourcc, FPS, (self.resize_w, self.resize_h))
+                    self.fps_numbers = FPS * self.video_time
+                    self.video_fps = 0
+                    self.video_writer = True
+        elif self.settings['trigger'] == 'hardware':
+            pass
+
+    def collect(self):
+        if self.os == 'pi':
+            for image in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
+                frame = image.array
+                self.now_time = datetime.now()
+                today_folder = self.now_time.strftime("%Y-%m-%d")
+                self.FTPMkdir(today_folder)
+                self.judgeData(frame)
+                
+                cv2.imshow("Execute", frame)
+                key = cv2.waitKey(1) & 0xFF
+                self.ftp.cwd("../")
+                if key == ord('q'):
+                    break
+            self.camera.close()
+            cv2.destroyAllWindows
+
+        else:
+            while True:
+                self.now_time = datetime.now()
+                ret, frame = self.camera.read()
+                today_folder = self.now_time.strftime("%Y-%m-%d")
+                self.FTPMkdir(today_folder)
+                self.judgeData(frame)
+                
+                cv2.imshow("Execute", frame)
+                key = cv2.waitKey(1) & 0xFF
+                self.ftp.cwd("../")
+                if key == ord('q'):
+                    break
+                
+            cv2.destroyAllWindows()
+            self.camera.release()
