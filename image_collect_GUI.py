@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import filedialog as fd
 from tkinter import font
 from PIL import ImageTk, Image
-from GUI_commond import  CheckUserInput, drawRoI, executeCollectData
+from GUI_commond import  CheckUserInput, drawRoI, executeCollectData, testPIN
 from PIL import ImageTk, Image
 import cv2
 import os
@@ -15,6 +15,10 @@ import json
 ###########################################
 TITLE_NAME_FONT = ('Times', 16, 'bold')
 BUTTON_FONT = ('Times', 16)
+PIN_GPIO = {2:'3', 3:'5', 4:'7', 17:'11', 27:'13', 22:'15', 10:'19', 9:'21', 11:'23'\
+            ,5:'29', 6:'31', 33:'33', 19:'35', 26:'37', 18:'12', 8:'25', 7:'26', 12:'32',\
+            16:'36', 20:'38', 21:'40'}
+MODE = {0:"High", 1:"Low"}
 ###########################################
 
 class collectImageGUI:
@@ -122,12 +126,15 @@ class collectImageGUI:
                         "23", "24", "26", "29", "31", "32", "33", "35", "36", "37", "38", "40"])
         self.sensor_text.current(0)
         self.sensor_text.grid(row=0, column=1)
+        self.sensor_test_button = tk.Button(self.sensor_frame, text="Test", height=1, font=BUTTON_FONT, command=lambda: testPIN(self.sensor_var.get()))
+        self.sensor_test_button.grid(row=0, column=2)
         self.sensor_condition_var = tk.StringVar()
         self.sensor_condition_label = tk.Label(self.sensor_frame, text="Collected image using sensor", font=TITLE_NAME_FONT)
         self.sensor_condition_label.grid(row=1, column=0)
-        self.sensor_condition_box = ttk.Combobox(self.sensor_frame, textvariable=self.sensor_condition_var, values=["Choose condition", "Masked", "Unmasked"])
+        self.sensor_condition_box = ttk.Combobox(self.sensor_frame, textvariable=self.sensor_condition_var, values=["Choose condition", "High", "Low"])
         self.sensor_condition_box.current(0)
         self.sensor_condition_box.grid(row=1, column=1)
+        
         self.sensor_frame.pack()
 
         # other set
@@ -260,6 +267,8 @@ class collectImageGUI:
                         self.user_choice_dict['roi'] = array_list['roi']
                 else:
                     self.condition_value.set(0)
+                    self.sensor_var.set(PIN_GPIO[array_list['sensor']])
+                    self.sensor_condition_var.set(MODE[array_list['sensor condition']])
                 
                 self.interval_time_var.set(array_list['interval'])
                 self.delay_time_var.set(array_list['delay'])
@@ -268,4 +277,4 @@ class collectImageGUI:
 if __name__ == "__main__":
     if not os.path.exists("condition_images"):
         os.mkdir("condition_images")
-    GUI = collectImageGUI(os='windows') 
+    GUI = collectImageGUI(os='pi') 

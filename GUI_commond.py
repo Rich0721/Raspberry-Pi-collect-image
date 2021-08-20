@@ -14,6 +14,7 @@ IP_RELU = "^10.(96|97).+((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)(25[0-5
 GPIO_PIN = {'3':2, '5':3, '7':4, '11':17, '13':27, '15':22,'19':10, '21':9, '23':11\
             ,'29':5, '31':6, '33':33, '35':19, '37':26, '12':18, '25':8, '26':7, '32':12,\
             '36':16, '38':20, '40':21}
+SENSOR_CONDITION = {"High":1, "Low":0}
 showCrosshair = False # Don't display grid
 fromCenter = False # Select top-left to button-right
 #################################################
@@ -39,6 +40,17 @@ def executeCollectData(json_file, camera, os, windows):
         '''
     else:
         msg.showerror("Don't execute", "The file isn't existing!\nPlease create new file.")
+
+def testPIN(pin):
+    import RPi.GPIO as GPIO
+    if pin == "Choose Sensor Pin":
+        msg.showerror("Input error", "Must save or cut image")
+    else:
+        pin_number = GPIO_PIN[pin] 
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(pin_number, GPIO.IN)
+        sleep(0.1)
+        msg.askquestion("Pin's potential", "It is {}".format(GPIO.input(pin_number)))
 
 def CheckUserInput(stringVars:dict):
 
@@ -109,7 +121,7 @@ def CheckUserInput(stringVars:dict):
             show_text += "Sensor PIN:{}\n".format(stringVars['sensor'].get())
         
         if stringVars['sensor_condition'].get() != "Choose condition":
-            show_text += "Sensor condition:{}\n".format(stringVars['sensor_condition'])
+            show_text += "Sensor condition:{}\n".format(stringVars['sensor_condition'].get())
         
         if len(stringVars['video_time'].get()) > 0:
             show_text += "Video time:{}\n".format(stringVars['video_time'].get())
@@ -145,6 +157,7 @@ def writeJson(file_name, stringVars:dict):
     if stringVars["condition"].get() == 0:
         data["trigger"] = "hardware"
         data["sensor"] = GPIO_PIN[stringVars["sensor"].get()]
+        data["sensor condition"] = SENSOR_CONDITION[stringVars['sensor_condition'].get()]
     elif stringVars["condition"].get() == 1:
         data["trigger"] = "software"
         data["path"] = stringVars["path"]

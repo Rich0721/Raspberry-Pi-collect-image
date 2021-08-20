@@ -4,22 +4,11 @@ import json
 from ftplib import FTP
 from datetime import datetime
 from time import sleep
-#from skimage.measure import compare_ssim as ssim
-#from skimage.metrics import structural_similarity as ssim
 import numpy as np
-#from GUI_commond import VideoCapture
-#from picamera.array import PiRGBArray
-#from picamera import PiCamera
 
 ###################################################
 THRESHOLD = 0.4
 FPS = 30
-fps_numbers = 0
-video_fps = 0 # writer in video frame numbers 
-out = None # video writer
-fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-resize_h, reize_w = 0, 0
-video_path = None
 ###################################################
 
 class collectImageOrVideo:
@@ -29,9 +18,11 @@ class collectImageOrVideo:
             from skimage.metrics import structural_similarity as ssim
             from picamera.array import PiRGBArray
             from picamera import PiCamera
+            import RPi.GPIO as GPIO
             self.camera = PiCamera()
             self.PiRGBArray = PiRGBArray(self.camera)
             self.ssim = ssim
+            self.GPIO = GPIO
         elif os == 'windows':
             from skimage.measure import compare_ssim as ssim
             self.ssim = ssim
@@ -48,9 +39,9 @@ class collectImageOrVideo:
         self.path = None
         self.video_writer = False
         self.image_writer = False
-        self.FTPConnect()
-        #self.ftp = self.FTPConnect()
-        self.FTPMkdir(self.settings['project name'])
+        #self.FTPConnect()
+        
+        #self.FTPMkdir(self.settings['project name'])
 
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
         self.interval_time = int(self.settings['interval'])
@@ -67,7 +58,10 @@ class collectImageOrVideo:
             self.condition_image_gray = cv2.cvtColor(self.condition_image, cv2.COLOR_BGR2GRAY)
 
         if self.settings['trigger'] == 'hardware':
-            self.sensor = self.settings['sensor']
+            self.sensor_pin = self.settings['sensor']
+            self.GPIO.setmode(self.GPIO.BCM)
+            self.GPIO.setup(self.sensor_pin, self.GPIO.IN)
+            self.condition_sensor = self.settings['sensor condition']
         self.now_time = None
         self.last_time = None
 
@@ -140,13 +134,13 @@ class collectImageOrVideo:
 
         if self.last_time is None:
             cv2.imwrite(self.path, frame)
-            self.FTPUpload()
+            #self.FTPUpload()
             self.last_time = self.now_time
         else:
             seconds = (self.now_time - self.last_time).seconds
             if seconds >= self.interval_time:
                 cv2.imwrite(self.path, frame)
-                self.FTPUpload()
+                #self.FTPUpload()
                 self.last_time = self.now_time
 
     def videoStorage(self, frame):
@@ -164,7 +158,7 @@ class collectImageOrVideo:
                 self.video_writer = False
                 self.out.release()
                 self.video_fps = 0
-                self.FTPUpload() 
+                #self.FTPUpload() 
         elif self.settings['trigger'] == 'software':
             # trigger is software has 2 method that collect data
             if self.condition_roi is None:
@@ -193,25 +187,47 @@ class collectImageOrVideo:
                     self.video_fps = 0
                     self.video_writer = True
         elif self.settings['trigger'] == 'hardware':
-            pass
+            #print("hardware")
+            if self.GPIO.input(self.sensor_pin) == self.condition_sensor:
+                
+                if self.delay_time > 0:
+                    sleep(self.delay_time)
+                    
+                if self.settings['method'] == 'image':
+                    self.image_writer = True
+                    self.path = self.now_time.strftime("%H%M%S") + ".jpg"
+                else:
+                    self.path = self.now_time.strftime("%H%M%S") + ".mp4"
+                    h, w = frame.shape[:2]
+                    if h > 1080 and w >1920:
+                        self.resize_w = 1920
+                        self.resize_h = 1080
+                    else:
+                        self.resize_w = w
+                        self.resize_h = h
+                    self.out = cv2.VideoWriter(self.path, self.fourcc, FPS, (self.resize_w, self.resize_h))
+                    self.fps_numbers = FPS * self.video_time
+                    self.video_fps = 0
+                    self.video_writer = True
 
     def collect(self):
         if self.os == 'pi':
-            for image in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
+            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=True):
                 frame = image.array
                 self.now_time = datetime.now()
                 today_folder = self.now_time.strftime("%Y-%m-%d")
-                self.FTPMkdir(today_folder)
+                #self.FTPMkdir(today_folder)
                 self.judgeData(frame)
                 
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF
-                self.ftp.cwd("../")
+                #self.ftp.cwd("../")
+                self.PiRGBArray.truncate(0)
                 if key == ord('q'):
                     break
-            self.camera.close()
-            cv2.destroyAllWindows
 
+            cv2.destroyAllWindows()
+            self.camera.close()
         else:
             while True:
                 self.now_time = datetime.now()
