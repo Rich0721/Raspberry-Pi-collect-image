@@ -29,15 +29,6 @@ def executeCollectData(json_file, camera, os, windows):
         from image_collect_GUI import collectImageGUI
         GUI = collectImageGUI(os=os)
         
-        
-        '''
-        if os == 'pi':
-            from selectData import collectDataRaspberryPi
-            collectDataRaspberryPi(json_file)
-        else:
-            from selectData import collectData
-            collectData()
-        '''
     else:
         msg.showerror("Don't execute", "The file isn't existing!\nPlease create new file.")
 
@@ -50,7 +41,7 @@ def testPIN(pin):
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(pin_number, GPIO.IN)
         sleep(0.1)
-        msg.askquestion("Pin's potential", "It is {}".format(GPIO.input(pin_number)))
+        msg.showinfo("Pin's potential", "It is {}".format(GPIO.input(pin_number)))
 
 def CheckUserInput(stringVars:dict):
 

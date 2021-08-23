@@ -203,6 +203,9 @@ class collectImageGUI:
                 self.photo = frame
                 self.rate = 480 / w
                 image = cv2.resize(frame, (int(self.rate*w), int(self.rate*h)))
+                if self.user_choice_dict['roi'] is not None:
+                    for roi in self.user_choice_dict['roi']:
+                        image = cv2.rectangle(image, (int(roi[0]*self.rate), int(roi[1]*self.rate)), (int(roi[2]*self.rate), int(roi[3]*self.rate)), (255, 0, 0), 2)
                 image = ImageTk.PhotoImage(image=Image.fromarray(image))
             except:
                 image = Image.open("./basic_image/pi_GPIO.png").resize((480, 270))
@@ -277,4 +280,4 @@ class collectImageGUI:
 if __name__ == "__main__":
     if not os.path.exists("condition_images"):
         os.mkdir("condition_images")
-    GUI = collectImageGUI(os='pi') 
+    GUI = collectImageGUI(os='windows') 
