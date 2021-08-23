@@ -39,9 +39,9 @@ class collectImageOrVideo:
         self.path = None
         self.video_writer = False
         self.image_writer = False
-        #self.FTPConnect()
+        self.FTPConnect()
         
-        #self.FTPMkdir(self.settings['project name'])
+        self.FTPMkdir(self.settings['project name'])
 
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
         self.interval_time = int(self.settings['interval'])
@@ -75,10 +75,8 @@ class collectImageOrVideo:
             self.ftp.connect(self.settings['FTP'], 21)
             self.ftp.login(self.settings['user'], self.settings['password'])
             print("Connect {} success!".format(self.settings['FTP']))
-            #return ftp
         except:
             print("Connect {} failed".format(self.settings['FTP']))
-            #return None
     
     def FTPUpload(self):
         try:
@@ -134,13 +132,13 @@ class collectImageOrVideo:
 
         if self.last_time is None:
             cv2.imwrite(self.path, frame)
-            #self.FTPUpload()
+            self.FTPUpload()
             self.last_time = self.now_time
         else:
             seconds = (self.now_time - self.last_time).seconds
             if seconds >= self.interval_time:
                 cv2.imwrite(self.path, frame)
-                #self.FTPUpload()
+                self.FTPUpload()
                 self.last_time = self.now_time
 
     def videoStorage(self, frame):
@@ -158,7 +156,7 @@ class collectImageOrVideo:
                 self.video_writer = False
                 self.out.release()
                 self.video_fps = 0
-                #self.FTPUpload() 
+                self.FTPUpload() 
         elif self.settings['trigger'] == 'software':
             # trigger is software has 2 method that collect data
             if self.condition_roi is None:
@@ -187,7 +185,6 @@ class collectImageOrVideo:
                     self.video_fps = 0
                     self.video_writer = True
         elif self.settings['trigger'] == 'hardware':
-            #print("hardware")
             if self.GPIO.input(self.sensor_pin) == self.condition_sensor:
                 
                 if self.delay_time > 0:
@@ -216,12 +213,12 @@ class collectImageOrVideo:
                 frame = image.array
                 self.now_time = datetime.now()
                 today_folder = self.now_time.strftime("%Y-%m-%d")
-                #self.FTPMkdir(today_folder)
+                self.FTPMkdir(today_folder)
                 self.judgeData(frame)
                 
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF
-                #self.ftp.cwd("../")
+                self.ftp.cwd("../")
                 self.PiRGBArray.truncate(0)
                 if key == ord('q'):
                     break
