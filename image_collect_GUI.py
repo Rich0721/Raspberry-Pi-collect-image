@@ -199,7 +199,11 @@ class collectImageGUI:
         else:
             try:
                 frame = self.camera.get_frame()
-                h, w = frame.shape[:2]
+                if self.user_choice_dict['roi'] is None:
+                    h, w = frame.shape[:2]
+                else:
+                    temp_image = cv2.imread(self.user_choice_dict['path'])
+                    h, w = temp_image.shape[:2]
                 self.photo = frame
                 self.rate = 480 / w
                 image = cv2.resize(frame, (int(self.rate*w), int(self.rate*h)))
@@ -208,9 +212,16 @@ class collectImageGUI:
                         image = cv2.rectangle(image, (int(roi[0]*self.rate), int(roi[1]*self.rate)), (int(roi[2]*self.rate), int(roi[3]*self.rate)), (255, 0, 0), 2)
                 image = ImageTk.PhotoImage(image=Image.fromarray(image))
             except:
-                image = Image.open("./basic_image/pi_GPIO.png").resize((480, 270))
+                if self.os == 'pi':
+                    from GUI_commond import VideoCapture
+                    self.camera = VideoCapture()
+                elif self.os == 'windows':
+                    from GUI_commond import VideoCaptureWebCamera
+                    self.camera = VideoCaptureWebCamera()
+                image = Image.open("./basic_image/not_connecting.png").resize((480, 270))
                 image = ImageTk.PhotoImage(image)
                 self.photo = None
+            
         self.condition_image.configure(image=image)
         self.condition_image.image = image
         self.windows.after(self.delay, self.update_condition)

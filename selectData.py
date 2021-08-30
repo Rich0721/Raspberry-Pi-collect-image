@@ -1,3 +1,4 @@
+import queue
 import cv2
 import os
 import json
@@ -5,10 +6,11 @@ from ftplib import FTP
 from datetime import datetime
 from time import sleep
 import numpy as np
+from queue import Queue 
 
 ###################################################
 THRESHOLD = 0.4
-FPS = 30
+FPS = 10
 ###################################################
 
 class collectImageOrVideo:
@@ -40,9 +42,13 @@ class collectImageOrVideo:
         self.video_writer = False
         self.image_writer = False
         self.FTPConnect()
-        
+        self.start_time = None
         self.FTPMkdir(self.settings['project name'])
+        self.ti = None
+        #self.queue = Queue()
+        #self.ftp.quit()
 
+        self.today = None
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
         self.interval_time = int(self.settings['interval'])
         self.delay_time = int(self.settings['delay'])
@@ -79,6 +85,10 @@ class collectImageOrVideo:
             print("Connect {} failed".format(self.settings['FTP']))
     
     def FTPUpload(self):
+        #self.FTPConnect()
+        #self.FTPMkdir(self.settings['project name'])
+        #self.FTPMkdir(self.today)
+
         try:
             im = open(self.path, 'rb')
             self.ftp.storbinary("STOR {}".format(self.path), im)
@@ -86,9 +96,10 @@ class collectImageOrVideo:
             print("Upload success!")
             os.remove(self.path)
             self.path = None
-        except:
+        except Exception as e:
             print("Upload failed!")
             pass
+        #self.ftp.quit()
 
     def FTPMkdir(self, folder):
         if folder not in self.ftp.nlst():
@@ -142,22 +153,33 @@ class collectImageOrVideo:
                 self.last_time = self.now_time
 
     def videoStorage(self, frame):
+        #while not self.queue.empty():
+        #    frame = cv2.resize(self.queue.get(), (self.resize_w, self.resize_h))
+        #    self.out.write(frame)    
         frame = cv2.resize(frame, (self.resize_w, self.resize_h))
         self.out.write(frame)
+        print("{}".format(datetime.now() - self.ti))
+        self.ti = datetime.now()
 
     def judgeData(self, frame):
+        '''
         if self.image_writer:
-                self.image_writer = False
-                self.imageStorage(frame)
+            self.image_writer = False
+            self.imageStorage(frame)
         elif self.video_writer:
             self.video_fps += 1
-            self.videoStorage(frame)
+            self.queue.put(frame)
+            print("{}".format(datetime.now() - self.ti))
+            self.ti = datetime.now()
+            #self.videoStorage(frame)
             if self.video_fps >= self.fps_numbers:
                 self.video_writer = False
+                self.videoStorage()
                 self.out.release()
                 self.video_fps = 0
-                self.FTPUpload() 
-        elif self.settings['trigger'] == 'software':
+                self.FTPUpload()
+        '''     
+        if self.settings['trigger'] == 'software':
             # trigger is software has 2 method that collect data
             if self.condition_roi is None:
                 choice = "SSIM"
@@ -180,6 +202,7 @@ class collectImageOrVideo:
                     else:
                         self.resize_w = w
                         self.resize_h = h
+                    self.ti = datetime.now()
                     self.out = cv2.VideoWriter(self.path, self.fourcc, FPS, (self.resize_w, self.resize_h))
                     self.fps_numbers = FPS * self.video_time
                     self.video_fps = 0
@@ -208,6 +231,7 @@ class collectImageOrVideo:
                     self.video_writer = True
 
     def collect(self):
+
         if self.os == 'pi':
             for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=True):
                 frame = image.array
@@ -229,13 +253,32 @@ class collectImageOrVideo:
             while True:
                 self.now_time = datetime.now()
                 ret, frame = self.camera.read()
-                today_folder = self.now_time.strftime("%Y-%m-%d")
-                self.FTPMkdir(today_folder)
-                self.judgeData(frame)
+                
+                if self.today is None:
+                    self.today = self.now_time.strftime("%Y-%m-%d")
+                    self.FTPMkdir(self.today)
+                elif self.today != self.now_time.strftime("%Y-%m-%d"):
+                    self.ftp.cwd("../")
+                    self.today = self.now_time.strftime("%Y-%m-%d")
+                    self.FTPMkdir(self.today)
+
+                if self.image_writer:
+                    self.image_writer = False
+                    self.imageStorage(frame)
+                elif self.video_writer:
+                    self.video_fps += 1
+                    self.videoStorage(frame)
+                    if self.video_fps >= self.fps_numbers:
+                        self.video_writer = False
+                        self.out.release()
+                        self.video_fps = 0
+                        self.FTPUpload()
+                else:
+                    self.judgeData(frame)
                 
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF
-                self.ftp.cwd("../")
+                
                 if key == ord('q'):
                     break
                 

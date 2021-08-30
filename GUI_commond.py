@@ -210,8 +210,10 @@ class VideoCapture:
 class VideoCaptureWebCamera():
     
     def __init__(self):
-        self.camers = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
-
+        try:
+            self.camers = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
+        except Exception as e:
+            print(e)
     def get_frame(self):
         cap, frame = self.camers.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
