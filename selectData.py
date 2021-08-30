@@ -89,7 +89,8 @@ class collectImageOrVideo:
     def FTPUpload(self):
         try:
             self.FTPConnect()
-            self.FTPMkdir("{}/{}".format(self.settings['project name'], self.today))
+            self.FTPMkdir(self.settings['project name'])
+            self.FTPMkdir(self.today)
             im = open(self.path, 'rb')
             self.ftp.storbinary("STOR {}".format(self.path), im)
             im.close()
@@ -134,7 +135,6 @@ class collectImageOrVideo:
                     storages.append([xmin, ymin])
                 
                 if len(storages) == len(self.condition_roi):
-                    
                     return True
                 return False
         else:
@@ -143,18 +143,6 @@ class collectImageOrVideo:
     def imageStorage(self, frame):
         cv2.imwrite(self.path, frame)
         self.FTPUpload()
-        '''
-        if self.last_time is None:
-            cv2.imwrite(self.path, frame)
-            self.FTPUpload()
-            self.last_time = self.now_time
-        else:
-            seconds = (self.now_time - self.last_time).seconds
-            if seconds >= self.interval_time:
-                cv2.imwrite(self.path, frame)
-                self.FTPUpload()
-                self.last_time = self.now_time
-        '''
 
     def videoStorage(self):
         while not self.queue.empty():
@@ -171,12 +159,6 @@ class collectImageOrVideo:
                 choice = "Template"
 
             if self.caluateSSIMAndTemplate(frame, choice=choice):
-                if self.last_time is None:
-                    pass
-                else:
-                    seconds = (self.now_time - self.last_time).seconds
-                    if seconds < self.interval_time:
-                        return
                     
                 if self.delay_time > 0:
                     sleep(self.delay_time)
@@ -200,12 +182,6 @@ class collectImageOrVideo:
                     self.video_writer = True
         elif self.settings['trigger'] == 'hardware':
             if self.GPIO.input(self.sensor_pin) == self.condition_sensor:
-                if self.last_time is None:
-                    pass
-                else:
-                    seconds = (self.now_time - self.last_time).seconds
-                    if seconds < self.interval_time:
-                        return
                 
                 if self.delay_time > 0:
                     sleep(self.delay_time)
@@ -252,7 +228,14 @@ class collectImageOrVideo:
                         self.video_fps = 0
                         #self.FTPUpload()
                 else:
-                    self.judgeData(frame)
+                    if self.last_time is None:
+                        #pass
+                        self.judgeData(frame)
+                    else:
+                        seconds = (self.now_time - self.last_time).seconds
+                        if seconds >= self.interval_time:
+                            self.judgeData(frame)
+                    
 
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF
@@ -277,14 +260,21 @@ class collectImageOrVideo:
                     self.imageStorage(frame)
                 elif self.video_writer:
                     self.video_fps += 1
-                    self.videoStorage(frame)
+                    self.queue.put(frame)
                     if self.video_fps >= self.fps_numbers:
                         self.video_writer = False
+                        self.videoStorage()
                         self.out.release()
                         self.video_fps = 0
                         self.FTPUpload()
                 else:
-                    self.judgeData(frame)
+                    if self.last_time is None:
+                        #pass
+                        self.judgeData(frame)
+                    else:
+                        seconds = (self.now_time - self.last_time).seconds
+                        if seconds >= self.interval_time:
+                            self.judgeData(frame)
                 
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF

@@ -291,4 +291,4 @@ class collectImageGUI:
 if __name__ == "__main__":
     if not os.path.exists("condition_images"):
         os.mkdir("condition_images")
-    GUI = collectImageGUI(os='pi') 
+    GUI = collectImageGUI(os='windows') 

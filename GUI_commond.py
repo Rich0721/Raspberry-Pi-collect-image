@@ -20,7 +20,7 @@ fromCenter = False # Select top-left to button-right
 #################################################
 
 def executeCollectData(json_file, camera, os, windows):
-    print(json_file)
+
     if exists(json_file):
         camera.__del__()
         windows.destroy()
@@ -54,12 +54,7 @@ def CheckUserInput(stringVars:dict):
     ftp_ip = stringVars['FTP_IP'].get()
     if not re.search(IP_RELU, ftp_ip):
        msg.showwarning("Input error", "The FTP IP isn't OA or FAB.")
-    #else:
-    #    if not Test_FTP(ftp_ip, stringVars['user'].get(), stringVars['password'].get()):
-    #        alarmVars[0].set("FTP IP, user or password are error!")
-    #        check_pass = False
-    #    else:
-    #        alarmVars[0].set("")
+       check_pass = False
     
     # 0 is hardware, 1 is software
     if stringVars["condition"].get() == 0:
@@ -77,7 +72,9 @@ def CheckUserInput(stringVars:dict):
             check_pass = False
             
     if str.isdigit(stringVars['video_time'].get()) or len(stringVars['video_time'].get()) == 0:
-        pass
+        if int(stringVars['video_time'].get()) > 60:
+            msg.showerror("Max error", "The video time maximum is 60.")
+            check_pass = False
     else:
         msg.showerror("Input error", "Video time must is digit!")
         check_pass = False
