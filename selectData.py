@@ -9,7 +9,7 @@ import numpy as np
 from queue import Queue 
 
 ###################################################
-THRESHOLD = 0.4
+THRESHOLD = 0.8
 FPS = 10
 ###################################################
 
@@ -41,12 +41,14 @@ class collectImageOrVideo:
         self.path = None
         self.video_writer = False
         self.image_writer = False
-        self.FTPConnect()
+        
         self.start_time = None
+        self.FTPConnect()
         self.FTPMkdir(self.settings['project name'])
+        self.ftp.quit()
         self.ti = None
-        #self.queue = Queue()
-        #self.ftp.quit()
+        self.queue = Queue()
+        
 
         self.today = None
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
@@ -85,21 +87,20 @@ class collectImageOrVideo:
             print("Connect {} failed".format(self.settings['FTP']))
     
     def FTPUpload(self):
-        #self.FTPConnect()
-        #self.FTPMkdir(self.settings['project name'])
-        #self.FTPMkdir(self.today)
-
         try:
+            self.FTPConnect()
+            self.FTPMkdir("{}/{}".format(self.settings['project name'], self.today))
             im = open(self.path, 'rb')
             self.ftp.storbinary("STOR {}".format(self.path), im)
             im.close()
             print("Upload success!")
             os.remove(self.path)
             self.path = None
+            self.ftp.quit()
+            self.last_time = self.now_time
         except Exception as e:
             print("Upload failed!")
             pass
-        #self.ftp.quit()
 
     def FTPMkdir(self, folder):
         if folder not in self.ftp.nlst():
@@ -140,7 +141,9 @@ class collectImageOrVideo:
             raise ValueError("`choice` must is `SSIM` or `Template`.")
     
     def imageStorage(self, frame):
-
+        cv2.imwrite(self.path, frame)
+        self.FTPUpload()
+        '''
         if self.last_time is None:
             cv2.imwrite(self.path, frame)
             self.FTPUpload()
@@ -151,34 +154,15 @@ class collectImageOrVideo:
                 cv2.imwrite(self.path, frame)
                 self.FTPUpload()
                 self.last_time = self.now_time
+        '''
 
-    def videoStorage(self, frame):
-        #while not self.queue.empty():
-        #    frame = cv2.resize(self.queue.get(), (self.resize_w, self.resize_h))
-        #    self.out.write(frame)    
-        frame = cv2.resize(frame, (self.resize_w, self.resize_h))
-        self.out.write(frame)
-        print("{}".format(datetime.now() - self.ti))
-        self.ti = datetime.now()
+    def videoStorage(self):
+        while not self.queue.empty():
+            frame = cv2.resize(self.queue.get(), (self.resize_w, self.resize_h))
+            self.out.write(frame)
 
     def judgeData(self, frame):
-        '''
-        if self.image_writer:
-            self.image_writer = False
-            self.imageStorage(frame)
-        elif self.video_writer:
-            self.video_fps += 1
-            self.queue.put(frame)
-            print("{}".format(datetime.now() - self.ti))
-            self.ti = datetime.now()
-            #self.videoStorage(frame)
-            if self.video_fps >= self.fps_numbers:
-                self.video_writer = False
-                self.videoStorage()
-                self.out.release()
-                self.video_fps = 0
-                self.FTPUpload()
-        '''     
+  
         if self.settings['trigger'] == 'software':
             # trigger is software has 2 method that collect data
             if self.condition_roi is None:
@@ -187,6 +171,13 @@ class collectImageOrVideo:
                 choice = "Template"
 
             if self.caluateSSIMAndTemplate(frame, choice=choice):
+                if self.last_time is None:
+                    pass
+                else:
+                    seconds = (self.now_time - self.last_time).seconds
+                    if seconds < self.interval_time:
+                        return
+                    
                 if self.delay_time > 0:
                     sleep(self.delay_time)
                 
@@ -209,6 +200,12 @@ class collectImageOrVideo:
                     self.video_writer = True
         elif self.settings['trigger'] == 'hardware':
             if self.GPIO.input(self.sensor_pin) == self.condition_sensor:
+                if self.last_time is None:
+                    pass
+                else:
+                    seconds = (self.now_time - self.last_time).seconds
+                    if seconds < self.interval_time:
+                        return
                 
                 if self.delay_time > 0:
                     sleep(self.delay_time)
@@ -236,13 +233,29 @@ class collectImageOrVideo:
             for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=True):
                 frame = image.array
                 self.now_time = datetime.now()
-                today_folder = self.now_time.strftime("%Y-%m-%d")
-                self.FTPMkdir(today_folder)
-                self.judgeData(frame)
                 
+                if self.today is None:
+                    self.today = self.now_time.strftime("%Y-%m-%d")
+                elif self.today != self.now_time.strftime("%Y-%m-%d"):
+                    self.today = self.now_time.strftime("%Y-%m-%d")
+                
+                if self.image_writer:
+                    self.image_writer = False
+                    self.imageStorage(frame)
+                elif self.video_writer:
+                    self.video_fps += 1
+                    self.queue.put(frame)
+                    if self.video_fps >= self.fps_numbers:
+                        self.video_writer = False
+                        self.videoStorage()
+                        self.out.release()
+                        self.video_fps = 0
+                        #self.FTPUpload()
+                else:
+                    self.judgeData(frame)
+
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF
-                self.ftp.cwd("../")
                 self.PiRGBArray.truncate(0)
                 if key == ord('q'):
                     break
@@ -256,12 +269,9 @@ class collectImageOrVideo:
                 
                 if self.today is None:
                     self.today = self.now_time.strftime("%Y-%m-%d")
-                    self.FTPMkdir(self.today)
                 elif self.today != self.now_time.strftime("%Y-%m-%d"):
-                    self.ftp.cwd("../")
                     self.today = self.now_time.strftime("%Y-%m-%d")
-                    self.FTPMkdir(self.today)
-
+                    
                 if self.image_writer:
                     self.image_writer = False
                     self.imageStorage(frame)
