@@ -90,6 +90,12 @@ def CheckUserInput(stringVars:dict):
     else:
         msg.showerror("Input error", "Delay time must is digit!")
         check_pass = False
+
+    if str.isdigit(stringVars['continous_cut'].get()) or len(stringVars['continous_cut'].get()) == 0:
+        pass
+    else:
+        msg.showerror("Input error", "Continous cut must is digit!")
+        check_pass = False
     
     
     if check_pass:
@@ -119,6 +125,9 @@ def CheckUserInput(stringVars:dict):
         
         if len(stringVars['delay_time'].get()) > 0:
             show_text += "Delay time:{}\n".format(stringVars['delay_time'].get())
+        
+        if len(stringVars['continous_cut'].get()) > 0:
+            show_text += "Continous cut:{}\n".format(stringVars['continous_cut'].get())
 
         msg_box = msg.askyesno("Created Check", show_text)
         if msg_box:
@@ -170,7 +179,12 @@ def writeJson(file_name, stringVars:dict):
         data["delay"] = 0
     else:
          data["delay"] = int(stringVars["delay_time"].get())
-        
+
+    if len(stringVars["continous_cut"].get()) == 0:
+        data['continous_cut'] = 0
+    else:
+        data['continous_cut'] = int(stringVars['continous_cut'].get())
+
     with open(file_name, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 

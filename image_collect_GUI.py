@@ -13,8 +13,8 @@ import json
 #from picamera import PiCamera
 
 ###########################################
-TITLE_NAME_FONT = ('Times', 16, 'bold')
-BUTTON_FONT = ('Times', 16)
+TITLE_NAME_FONT = ('Times', 12, 'bold')
+BUTTON_FONT = ('Times', 10)
 PIN_GPIO = {2:'3', 3:'5', 4:'7', 17:'11', 27:'13', 22:'15', 10:'19', 9:'21', 11:'23'\
             ,5:'29', 6:'31', 33:'33', 19:'35', 26:'37', 18:'12', 8:'25', 7:'26', 12:'32',\
             16:'36', 20:'38', 21:'40'}
@@ -157,6 +157,12 @@ class collectImageGUI:
         self.delay_time_var.set(0)
         self.delay_time_text = tk.Entry(self.other_frame, textvariable=self.delay_time_var)
         self.delay_time_text.grid(row=2, column=1)
+        self.continuous_label = tk.Label(self.other_frame, text="Continuous Cut", font=TITLE_NAME_FONT)
+        self.continuous_label.grid(row=3, column=0)
+        self.continuous_var = tk.StringVar(0)
+        self.continuous_var.set(0)
+        self.continuous_text = tk.Entry(self.other_frame, textvariable=self.continuous_var)
+        self.continuous_text.grid(row=3, column=1)
         self.other_frame.pack()
         
         
@@ -173,7 +179,8 @@ class collectImageGUI:
             "interval_time": self.interval_time_var,
             "method": self.method_value,
             "condition":self.condition_value,
-            "sensor_condition":self.sensor_condition_var
+            "sensor_condition":self.sensor_condition_var,
+            "continous_cut":self.continuous_var
         }
         
         # Load and create JSON file and execute collect data using JSON file.
@@ -286,6 +293,7 @@ class collectImageGUI:
                 
                 self.interval_time_var.set(array_list['interval'])
                 self.delay_time_var.set(array_list['delay'])
+                self.continuous_var.set(array_list['continous_cut'])
             
 
 if __name__ == "__main__":

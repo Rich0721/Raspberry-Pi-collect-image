@@ -3,7 +3,7 @@ import cv2
 import os
 import json
 from ftplib import FTP
-from datetime import datetime
+from datetime import date, datetime
 from time import sleep
 import numpy as np
 from queue import Queue 
@@ -86,16 +86,18 @@ class collectImageOrVideo:
         except:
             print("Connect {} failed".format(self.settings['FTP']))
     
-    def FTPUpload(self):
+    def FTPUpload(self, files):
         try:
             self.FTPConnect()
             self.FTPMkdir(self.settings['project name'])
             self.FTPMkdir(self.today)
-            im = open(self.path, 'rb')
-            self.ftp.storbinary("STOR {}".format(self.path), im)
-            im.close()
+            for f in files:
+                im = open(f, 'rb')#open(self.path, 'rb')
+                self.ftp.storbinary("STOR {}".format(f), im)
+                im.close()
+                os.remove(f)
             print("Upload success!")
-            os.remove(self.path)
+            #os.remove(self.path)
             self.path = None
             self.ftp.quit()
             self.last_time = self.now_time
@@ -140,9 +142,18 @@ class collectImageOrVideo:
         else:
             raise ValueError("`choice` must is `SSIM` or `Template`.")
     
-    def imageStorage(self, frame):
-        cv2.imwrite(self.path, frame)
-        self.FTPUpload()
+    def imageStorage(self, frame=None, queue=False):
+        if not queue:
+            cv2.imwrite(self.path, frame)
+            self.FTPUpload([self.path])
+        else:
+            i = 0
+            images = []
+            while not self.queue.empty():
+                cv2.imwrite(self.path[:-4] + "_" + str(i) + ".jpg", self.queue.get())
+                images.append(self.path[:-4] + "_" + str(i) + ".jpg")
+                i += 1
+            self.FTPUpload(images)
 
     def videoStorage(self):
         while not self.queue.empty():
@@ -216,8 +227,16 @@ class collectImageOrVideo:
                     self.today = self.now_time.strftime("%Y-%m-%d")
                 
                 if self.image_writer:
-                    self.image_writer = False
-                    self.imageStorage(frame)
+                    if self.settings['continous_cut'] <= 1:
+                        self.image_writer = False
+                        self.imageStorage(frame)
+                    else:
+                        self.video_fps += 1
+                        self.queue.put(frame)
+                        if self.video_fps >= self.settings['continous_cut']:
+                            self.image_writer = False
+                            self.video_fps = 0
+                            self.imageStorage(queue=True)
                 elif self.video_writer:
                     self.video_fps += 1
                     self.queue.put(frame)
@@ -226,7 +245,7 @@ class collectImageOrVideo:
                         self.videoStorage()
                         self.out.release()
                         self.video_fps = 0
-                        #self.FTPUpload()
+                        self.FTPUpload([self.path])
                 else:
                     if self.last_time is None:
                         #pass
@@ -256,8 +275,16 @@ class collectImageOrVideo:
                     self.today = self.now_time.strftime("%Y-%m-%d")
                     
                 if self.image_writer:
-                    self.image_writer = False
-                    self.imageStorage(frame)
+                    if self.settings['continous_cut'] <= 1:
+                        self.image_writer = False
+                        self.imageStorage(frame)
+                    else:
+                        self.video_fps += 1
+                        self.queue.put(frame)
+                        if self.video_fps >= self.settings['continous_cut']:
+                            self.image_writer = False
+                            self.video_fps = 0
+                            self.imageStorage(queue=True)
                 elif self.video_writer:
                     self.video_fps += 1
                     self.queue.put(frame)
@@ -266,7 +293,7 @@ class collectImageOrVideo:
                         self.videoStorage()
                         self.out.release()
                         self.video_fps = 0
-                        self.FTPUpload()
+                        self.FTPUpload([self.path])
                 else:
                     if self.last_time is None:
                         #pass
