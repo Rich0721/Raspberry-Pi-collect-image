@@ -111,6 +111,11 @@ def CheckUserInput(stringVars:dict):
         if stringVars['roi'] is not None:
             show_text += "ROI: Use {} roi\n".format(len(stringVars['roi']))
         
+            if stringVars['cut_mode'].get() == 'SSIM':
+                show_text += "Compare cut image's SSIM\n"
+            elif stringVars['cut_mode'].get() == 'Template':
+                show_text += "Compare Template\n"
+        
         if stringVars['sensor'].get() != "Choose Sensor Pin":
             show_text += "Sensor PIN:{}\n".format(stringVars['sensor'].get())
         
@@ -164,6 +169,11 @@ def writeJson(file_name, stringVars:dict):
             data["Used_roi"] = True
             data["roi"] = stringVars["roi"]
     
+    if stringVars['cut_mode'].get() == 'SSIM':
+        data["SSIM"] = True
+    elif stringVars['cut_mode'].get() == 'Template':
+        data["SSIM"] = False
+    
     if data['method'] == "video":
         if len(stringVars["video_time"].get()) == 0:
             data["video_time"] = 60
@@ -204,14 +214,16 @@ class VideoCapture:
     def __init__(self):
         from picamera.array import PiRGBArray
         from picamera import PiCamera
-        self.camera = PiCamera()
-        self.camera.framerate = 32
+        self.camera = PiCamera(sensor_mode=0)
+        self.camera.resolution = (3280, 2464)#3280x2464
+        self.camera.framerate = 15
         self.rawCapture = PiRGBArray(self.camera)
         sleep(0.1)
         
     def get_frame(self):
         self.camera.capture(self.rawCapture, format='rgb')
         image =self.rawCapture.array
+        #print(image.shape)
         self.rawCapture.truncate(0)
         return image 
     

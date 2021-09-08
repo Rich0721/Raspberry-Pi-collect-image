@@ -21,8 +21,14 @@ class collectImageOrVideo:
             from picamera.array import PiRGBArray
             from picamera import PiCamera
             import RPi.GPIO as GPIO
-            self.camera = PiCamera()
+            from GUI_commond import VideoCapture
+            #self.camera = VideoCapture()
+            
+            self.camera = PiCamera(sensor_mode=0)
             self.PiRGBArray = PiRGBArray(self.camera)
+            self.camera.resolution = (3280, 2464)
+            self.camera.framerate = 15
+            
             self.ssim = ssim
             self.GPIO = GPIO
         elif os == 'windows':
@@ -43,9 +49,9 @@ class collectImageOrVideo:
         self.image_writer = False
         
         self.start_time = None
-        self.FTPConnect()
-        self.FTPMkdir(self.settings['project name'])
-        self.ftp.quit()
+        #self.FTPConnect()
+        #self.FTPMkdir(self.settings['project name'])
+        #self.ftp.quit()
         self.ti = None
         self.queue = Queue()
         
@@ -126,18 +132,22 @@ class collectImageOrVideo:
         elif choice == 'Template':
             for roi in self.condition_roi:
                 template = self.condition_image_gray[roi[1]:roi[3], roi[0]:roi[2]]
-                
-                res = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
-                loc = np.where( res >= THRESHOLD)
-                
-                if loc[0].size > 0 and loc[1].size > 0:
-                    xmin = max(loc[1])
-                    ymin = max(loc[0])
-
-                    storages.append([xmin, ymin])
-                
-                if len(storages) == len(self.condition_roi):
-                    return True
+                if self.settings['SSIM']:
+                    score = self.ssim(gray_frame[roi[1]:roi[3], roi[0]:roi[2]], template)
+                    if score >= THRESHOLD:
+                        return True
+                else:
+                    res = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
+                    loc = np.where( res >= THRESHOLD)
+                    
+                    if loc[0].size > 0 and loc[1].size > 0:
+                        xmin = max(loc[1])
+                        ymin = max(loc[0])
+    
+                        storages.append([xmin, ymin])
+                    
+                    if len(storages) == len(self.condition_roi):
+                        return True
                 return False
         else:
             raise ValueError("`choice` must is `SSIM` or `Template`.")
@@ -145,7 +155,7 @@ class collectImageOrVideo:
     def imageStorage(self, frame=None, queue=False):
         if not queue:
             cv2.imwrite(self.path, frame)
-            self.FTPUpload([self.path])
+            #self.FTPUpload([self.path])
         else:
             i = 0
             images = []
@@ -153,7 +163,7 @@ class collectImageOrVideo:
                 cv2.imwrite(self.path[:-4] + "_" + str(i) + ".jpg", self.queue.get())
                 images.append(self.path[:-4] + "_" + str(i) + ".jpg")
                 i += 1
-            self.FTPUpload(images)
+            #self.FTPUpload(images)
 
     def videoStorage(self):
         while not self.queue.empty():
@@ -215,12 +225,14 @@ class collectImageOrVideo:
                     self.video_writer = True
 
     def collect(self):
-
+        cv2.namedWindow("Execute", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("Execute", 640, 480)
         if self.os == 'pi':
-            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=True):
-                frame = image.array
-                self.now_time = datetime.now()
+            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=False):
                 
+                frame = image.array
+                
+                self.now_time = datetime.now()
                 if self.today is None:
                     self.today = self.now_time.strftime("%Y-%m-%d")
                 elif self.today != self.now_time.strftime("%Y-%m-%d"):
@@ -266,6 +278,7 @@ class collectImageOrVideo:
             self.camera.close()
         else:
             while True:
+                
                 self.now_time = datetime.now()
                 ret, frame = self.camera.read()
                 

@@ -64,20 +64,20 @@ class collectImageGUI:
         self.project_text = tk.Entry(self.basic_set_frame, textvariable=self.project_var)
         self.project_text.grid(column=1, row=0)
         self.FTP_label = tk.Label(self.basic_set_frame, text="FTP server IP", font=TITLE_NAME_FONT)
-        self.FTP_label.grid(column=0, row=1)
+        self.FTP_label.grid(column=2, row=0)
         self.FTP_var = tk.StringVar()
         self.FTP_text = tk.Entry(self.basic_set_frame, textvariable=self.FTP_var)
-        self.FTP_text.grid(column=1, row=1)
+        self.FTP_text.grid(column=3, row=0)
         self.user_label = tk.Label(self.basic_set_frame, text="user", font=TITLE_NAME_FONT)
-        self.user_label.grid(column=0, row=2)
+        self.user_label.grid(column=0, row=1)
         self.user_var = tk.StringVar()
         self.user_text = tk.Entry(self.basic_set_frame, textvariable=self.user_var)
-        self.user_text.grid(column=1, row=2)
+        self.user_text.grid(column=1, row=1)
         self.password_label = tk.Label(self.basic_set_frame, text="password", font=TITLE_NAME_FONT)
-        self.password_label.grid(column=0, row=3)
+        self.password_label.grid(column=2, row=1)
         self.password_var = tk.StringVar()
         self.password_text = tk.Entry(self.basic_set_frame, textvariable=self.password_var)
-        self.password_text.grid(column=1, row=3)
+        self.password_text.grid(column=3, row=1)
         self.basic_set_frame.pack()
 
         # Set collect image of method
@@ -134,6 +134,12 @@ class collectImageGUI:
         self.sensor_condition_box = ttk.Combobox(self.sensor_frame, textvariable=self.sensor_condition_var, values=["Choose condition", "High", "Low"])
         self.sensor_condition_box.current(0)
         self.sensor_condition_box.grid(row=1, column=1)
+        self.cut_mode_var = tk.StringVar()
+        self.cut_mode_label = tk.Label(self.sensor_frame, text='Cut mode', font=TITLE_NAME_FONT)
+        self.cut_mode_label.grid(row=2, column=0)
+        self.cut_mode_choose = ttk.Combobox(self.sensor_frame, textvariable=self.cut_mode_var, values=["SSIM", "Template"])
+        self.cut_mode_choose.grid(row=2, column=1, padx=5)
+        self.cut_mode_choose.current(0)
         
         self.sensor_frame.pack()
 
@@ -180,7 +186,8 @@ class collectImageGUI:
             "method": self.method_value,
             "condition":self.condition_value,
             "sensor_condition":self.sensor_condition_var,
-            "continous_cut":self.continuous_var
+            "continous_cut":self.continuous_var,
+            "cut_mode":self.cut_mode_var
         }
         
         # Load and create JSON file and execute collect data using JSON file.
@@ -291,6 +298,10 @@ class collectImageGUI:
                     self.sensor_var.set(PIN_GPIO[array_list['sensor']])
                     self.sensor_condition_var.set(MODE[array_list['sensor condition']])
                 
+                if array_list['SSIM']:
+                    self.cut_mode_choose.current(0)
+                else:
+                    self.cut_mode_choose.current(1)
                 self.interval_time_var.set(array_list['interval'])
                 self.delay_time_var.set(array_list['delay'])
                 self.continuous_var.set(array_list['continous_cut'])
@@ -299,4 +310,4 @@ class collectImageGUI:
 if __name__ == "__main__":
     if not os.path.exists("condition_images"):
         os.mkdir("condition_images")
-    GUI = collectImageGUI(os='windows') 
+    GUI = collectImageGUI(os='pi') 
