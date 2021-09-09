@@ -28,7 +28,16 @@ class collectImageOrVideo:
             self.PiRGBArray = PiRGBArray(self.camera)
             self.camera.resolution = (3280, 2464)
             self.camera.framerate = 15
-            
+            #if os.path.exists("camera_set.json"):
+            try:
+                with open('camera_set.json', "r", encoding='utf-8') as f:
+                    camera_set = json.load(f)
+                    self.camera.saturation = camera_set['saturation']
+                    self.camera.brightness = camera_set['brightness']
+                    self.camera.iso = camera_set['iso']
+                    self.camera.shutter_speed = camera_set['shutter']
+            except:
+                pass
             self.ssim = ssim
             self.GPIO = GPIO
         elif os == 'windows':

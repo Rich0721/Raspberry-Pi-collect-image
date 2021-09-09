@@ -211,13 +211,22 @@ def Test_FTP(ip, user, password):
         return False
 
 class VideoCapture:
-    def __init__(self):
+    def __init__(self, json_file="camera_set.json"):
         from picamera.array import PiRGBArray
         from picamera import PiCamera
         self.camera = PiCamera(sensor_mode=0)
         self.camera.resolution = (3280, 2464)#3280x2464
         self.camera.framerate = 15
         self.rawCapture = PiRGBArray(self.camera)
+       
+        if os.path.exists(json_file):
+            with open(json_file, "r", encoding='utf-8') as f:
+                settings = json.load(f)
+                self.camera.saturation = settings['saturation']
+                self.camera.brightness = settings['brightness']
+                self.camera.iso = settings['iso']
+                self.camera.shutter_speed = settings['shutter']
+                
         sleep(0.1)
         
     def get_frame(self):
