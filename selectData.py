@@ -26,18 +26,9 @@ class collectImageOrVideo:
             
             self.camera = PiCamera(sensor_mode=0)
             self.PiRGBArray = PiRGBArray(self.camera)
-            self.camera.resolution = (3280, 2464)
+            self.camera.resolution = (1920, 1080)#(3280, 2464)
             self.camera.framerate = 15
-            #if os.path.exists("camera_set.json"):
-            try:
-                with open('camera_set.json', "r", encoding='utf-8') as f:
-                    camera_set = json.load(f)
-                    self.camera.saturation = camera_set['saturation']
-                    self.camera.brightness = camera_set['brightness']
-                    self.camera.iso = camera_set['iso']
-                    self.camera.shutter_speed = camera_set['shutter']
-            except:
-                pass
+            
             self.ssim = ssim
             self.GPIO = GPIO
         elif os == 'windows':
@@ -58,9 +49,9 @@ class collectImageOrVideo:
         self.image_writer = False
         
         self.start_time = None
-        #self.FTPConnect()
-        #self.FTPMkdir(self.settings['project name'])
-        #self.ftp.quit()
+        self.FTPConnect()
+        self.FTPMkdir(self.settings['project name'])
+        self.ftp.quit()
         self.ti = None
         self.queue = Queue()
         
@@ -164,7 +155,7 @@ class collectImageOrVideo:
     def imageStorage(self, frame=None, queue=False):
         if not queue:
             cv2.imwrite(self.path, frame)
-            #self.FTPUpload([self.path])
+            self.FTPUpload([self.path])
         else:
             i = 0
             images = []
@@ -172,7 +163,7 @@ class collectImageOrVideo:
                 cv2.imwrite(self.path[:-4] + "_" + str(i) + ".jpg", self.queue.get())
                 images.append(self.path[:-4] + "_" + str(i) + ".jpg")
                 i += 1
-            #self.FTPUpload(images)
+            self.FTPUpload(images)
 
     def videoStorage(self):
         while not self.queue.empty():

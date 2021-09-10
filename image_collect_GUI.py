@@ -140,6 +140,12 @@ class collectImageGUI:
         self.cut_mode_choose = ttk.Combobox(self.sensor_frame, textvariable=self.cut_mode_var, values=["SSIM", "Template"])
         self.cut_mode_choose.grid(row=2, column=1, padx=5)
         self.cut_mode_choose.current(0)
+        self.camera_resolution_var = tk.StringVar()
+        self.camera_resolution_label = tk.Label(self.sensor_frame, text='Resolution', font=TITLE_NAME_FONT)
+        self.camera_resolution_label.grid(row=3, column=0)
+        self.camera_resolution_choose = ttk.Combobox(self.sensor_frame, textvariable=self.camera_resolution_var, values=["640x480", "1280x720", "1640x922", "1640x1232", "2592x1944", "3280x2464"])
+        self.camera_resolution_choose.grid(row=3, column=1)
+        self.camera_resolution_choose.current(0)
         
         self.sensor_frame.pack()
 
@@ -152,23 +158,23 @@ class collectImageGUI:
         self.video_time_text = tk.Entry(self.other_frame, textvariable=self.video_time_var)
         self.video_time_text.grid(row=0, column=1)
         self.interval_time_label = tk.Label(self.other_frame, text="Interval time(sec)", font=TITLE_NAME_FONT)
-        self.interval_time_label.grid(row=1, column=0)
+        self.interval_time_label.grid(row=0, column=2)
         self.interval_time_var = tk.StringVar()
         self.interval_time_var.set(0)
         self.interval_time_text = tk.Entry(self.other_frame, textvariable=self.interval_time_var)
-        self.interval_time_text.grid(row=1, column=1)
+        self.interval_time_text.grid(row=0, column=3)
         self.delay_time_label = tk.Label(self.other_frame, text="Delay time(sec)", font=TITLE_NAME_FONT)
-        self.delay_time_label.grid(row=2, column=0)
+        self.delay_time_label.grid(row=1, column=0)
         self.delay_time_var = tk.StringVar(0)
         self.delay_time_var.set(0)
         self.delay_time_text = tk.Entry(self.other_frame, textvariable=self.delay_time_var)
-        self.delay_time_text.grid(row=2, column=1)
+        self.delay_time_text.grid(row=1, column=1)
         self.continuous_label = tk.Label(self.other_frame, text="Continuous Cut", font=TITLE_NAME_FONT)
-        self.continuous_label.grid(row=3, column=0)
+        self.continuous_label.grid(row=1, column=2)
         self.continuous_var = tk.StringVar(0)
         self.continuous_var.set(0)
         self.continuous_text = tk.Entry(self.other_frame, textvariable=self.continuous_var)
-        self.continuous_text.grid(row=3, column=1)
+        self.continuous_text.grid(row=1, column=3)
         self.other_frame.pack()
         
         
@@ -187,7 +193,8 @@ class collectImageGUI:
             "condition":self.condition_value,
             "sensor_condition":self.sensor_condition_var,
             "continous_cut":self.continuous_var,
-            "cut_mode":self.cut_mode_var
+            "cut_mode":self.cut_mode_var,
+            "resolution":self.camera_resolution_var
         }
         
         # Load and create JSON file and execute collect data using JSON file.
@@ -212,6 +219,7 @@ class collectImageGUI:
             self.photo = None
         else:
             try:
+                self.camera.set_camera(resolution=self.camera_resolution_choose.get())
                 frame = self.camera.get_frame()
                 if self.user_choice_dict['roi'] is None:
                     h, w = frame.shape[:2]
@@ -220,7 +228,7 @@ class collectImageGUI:
                     h, w = temp_image.shape[:2]
                 self.photo = frame
                 self.rate = 480 / w
-                image = cv2.resize(frame, (int(self.rate*w), int(self.rate*h)))
+                image = cv2.resize(frame, (480, 270))
                 if self.user_choice_dict['roi'] is not None:
                     for roi in self.user_choice_dict['roi']:
                         image = cv2.rectangle(image, (int(roi[0]*self.rate), int(roi[1]*self.rate)), (int(roi[2]*self.rate), int(roi[3]*self.rate)), (255, 0, 0), 2)
@@ -310,4 +318,4 @@ class collectImageGUI:
 if __name__ == "__main__":
     if not os.path.exists("condition_images"):
         os.mkdir("condition_images")
-    GUI = collectImageGUI(os='pi') 
+    GUI = collectImageGUI(os='windows') 
