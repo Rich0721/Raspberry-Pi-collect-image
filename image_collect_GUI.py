@@ -221,6 +221,7 @@ class collectImageGUI:
             try:
                 self.camera.set_camera(resolution=self.camera_resolution_choose.get())
                 frame = self.camera.get_frame()
+                print(frame.shape)
                 if self.user_choice_dict['roi'] is None:
                     h, w = frame.shape[:2]
                 else:
@@ -313,9 +314,10 @@ class collectImageGUI:
                 self.interval_time_var.set(array_list['interval'])
                 self.delay_time_var.set(array_list['delay'])
                 self.continuous_var.set(array_list['continous_cut'])
+                self.camera_resolution_var.set(array_list["resolution"])
             
 
 if __name__ == "__main__":
     if not os.path.exists("condition_images"):
         os.mkdir("condition_images")
-    GUI = collectImageGUI(os='windows') 
+    GUI = collectImageGUI(os='pi') 

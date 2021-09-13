@@ -16,6 +16,7 @@ FPS = 10
 class collectImageOrVideo:
     def __init__(self, json_file, os='pi'):
         
+        self.settings = self.readJson(json_file)
         if os == 'pi':
             from skimage.metrics import structural_similarity as ssim
             from picamera.array import PiRGBArray
@@ -26,8 +27,8 @@ class collectImageOrVideo:
             
             self.camera = PiCamera(sensor_mode=0)
             self.PiRGBArray = PiRGBArray(self.camera)
-            self.camera.resolution = (1920, 1080)#(3280, 2464)
-            self.camera.framerate = 15
+            self.camera.resolution = self.settings["resolution"]#(3280, 2464)
+            #self.camera.framerate = 15
             
             self.ssim = ssim
             self.GPIO = GPIO
@@ -38,7 +39,7 @@ class collectImageOrVideo:
         else:
             raise ValueError("`os` must is `pi` or `windows`")
         self.os = os
-        self.settings = self.readJson(json_file)
+        
         self.fps_numbers = 0
         self.video_fps = 0 # writer in video frame numbers 
         self.out = None # video writer
@@ -49,9 +50,9 @@ class collectImageOrVideo:
         self.image_writer = False
         
         self.start_time = None
-        self.FTPConnect()
-        self.FTPMkdir(self.settings['project name'])
-        self.ftp.quit()
+        #self.FTPConnect()
+        #self.FTPMkdir(self.settings['project name'])
+        #self.ftp.quit()
         self.ti = None
         self.queue = Queue()
         
@@ -155,7 +156,7 @@ class collectImageOrVideo:
     def imageStorage(self, frame=None, queue=False):
         if not queue:
             cv2.imwrite(self.path, frame)
-            self.FTPUpload([self.path])
+            #self.FTPUpload([self.path])
         else:
             i = 0
             images = []
@@ -163,7 +164,7 @@ class collectImageOrVideo:
                 cv2.imwrite(self.path[:-4] + "_" + str(i) + ".jpg", self.queue.get())
                 images.append(self.path[:-4] + "_" + str(i) + ".jpg")
                 i += 1
-            self.FTPUpload(images)
+            #self.FTPUpload(images)
 
     def videoStorage(self):
         while not self.queue.empty():
@@ -228,7 +229,7 @@ class collectImageOrVideo:
         cv2.namedWindow("Execute", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Execute", 640, 480)
         if self.os == 'pi':
-            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=False):
+            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=True):
                 
                 frame = image.array
                 

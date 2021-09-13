@@ -194,6 +194,8 @@ def writeJson(file_name, stringVars:dict):
         data['continous_cut'] = 0
     else:
         data['continous_cut'] = int(stringVars['continous_cut'].get())
+    
+    data["resolution"] = stringVars["resolution"].get()
 
     with open(file_name, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
@@ -216,7 +218,7 @@ class VideoCapture:
         from picamera import PiCamera
         self.camera = PiCamera(sensor_mode=0)
         #self.camera.resolution = (1920, 1080) #(3280, 2464)#3280x2464
-        self.camera.framerate = 15
+        #self.camera.framerate = 15
         self.rawCapture = PiRGBArray(self.camera)
         sleep(0.1)
         
