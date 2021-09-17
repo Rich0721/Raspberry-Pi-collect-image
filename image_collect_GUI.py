@@ -21,6 +21,7 @@ PIN_GPIO = {2:'3', 3:'5', 4:'7', 17:'11', 27:'13', 22:'15', 10:'19', 9:'21', 11:
 MODE = {0:"High", 1:"Low"}
 ###########################################
 
+
 class collectImageGUI:
 
     def __init__(self, width=600, height=800, os='pi'):
@@ -31,9 +32,11 @@ class collectImageGUI:
         if os == 'pi':
             from GUI_commond import VideoCapture
             self.camera = VideoCapture()
+            self.resolution = ["Normal resolution", "Middle resolution", "Higher resolution", "Maximum resolution"]
         elif os == 'windows':
             from GUI_commond import VideoCaptureWebCamera
             self.camera = VideoCaptureWebCamera()
+            self.resolution = ["Normal resolution", "Maximum resolution",]
         else:
             raise ValueError("os must is `pi` or `windows`")
         self.os = os
@@ -46,7 +49,7 @@ class collectImageGUI:
         self.roi = None
         self.photo = None
         self.user_choice_dict = None
-
+        self.resolution_temp = None
         self.setBasicLabel()
         self.delay = 15
         self.update_condition()
@@ -78,6 +81,19 @@ class collectImageGUI:
         self.password_var = tk.StringVar()
         self.password_text = tk.Entry(self.basic_set_frame, textvariable=self.password_var)
         self.password_text.grid(column=3, row=1)
+        self.camera_resolution_var = tk.StringVar()
+        self.camera_resolution_label = tk.Label(self.basic_set_frame, text='Resolution', font=TITLE_NAME_FONT)
+        self.camera_resolution_label.grid(row=3, column=0)
+        self.camera_resolution_choose = ttk.Combobox(self.basic_set_frame, textvariable=self.camera_resolution_var, values=self.resolution,state="readonly", width=17)
+        self.camera_resolution_choose.grid(row=3, column=1)
+        self.camera_resolution_choose.current(0)
+        self.cut_mode_var = tk.StringVar()
+        self.cut_mode_label = tk.Label(self.basic_set_frame, text='Cut mode', font=TITLE_NAME_FONT)
+        self.cut_mode_label.grid(row=3, column=2)
+        self.cut_mode_choose = ttk.Combobox(self.basic_set_frame, textvariable=self.cut_mode_var, state="readonly", width=17, values=["SSIM", "Template"])
+        self.cut_mode_choose.grid(row=3, column=3, padx=5)
+        self.cut_mode_choose.current(0)
+
         self.basic_set_frame.pack()
 
         # Set collect image of method
@@ -119,6 +135,7 @@ class collectImageGUI:
 
         # Sensor Pin
         self.sensor_var = tk.StringVar()
+        self.sensor_condition_var = tk.StringVar()
         self.sensor_frame = tk.Frame(self.windows, height=20)
         self.sensor_label = tk.Label(self.sensor_frame, text="IR sensor PIN  ", font=TITLE_NAME_FONT)
         self.sensor_label.grid(row=0, column=0)
@@ -128,25 +145,11 @@ class collectImageGUI:
         self.sensor_text.grid(row=0, column=1)
         self.sensor_test_button = tk.Button(self.sensor_frame, text="Test", height=1, font=BUTTON_FONT, command=lambda: testPIN(self.sensor_var.get()))
         self.sensor_test_button.grid(row=0, column=2)
-        self.sensor_condition_var = tk.StringVar()
         self.sensor_condition_label = tk.Label(self.sensor_frame, text="Collected image using sensor", font=TITLE_NAME_FONT)
         self.sensor_condition_label.grid(row=1, column=0)
         self.sensor_condition_box = ttk.Combobox(self.sensor_frame, textvariable=self.sensor_condition_var, values=["Choose condition", "High", "Low"])
         self.sensor_condition_box.current(0)
         self.sensor_condition_box.grid(row=1, column=1)
-        self.cut_mode_var = tk.StringVar()
-        self.cut_mode_label = tk.Label(self.sensor_frame, text='Cut mode', font=TITLE_NAME_FONT)
-        self.cut_mode_label.grid(row=2, column=0)
-        self.cut_mode_choose = ttk.Combobox(self.sensor_frame, textvariable=self.cut_mode_var, values=["SSIM", "Template"])
-        self.cut_mode_choose.grid(row=2, column=1, padx=5)
-        self.cut_mode_choose.current(0)
-        self.camera_resolution_var = tk.StringVar()
-        self.camera_resolution_label = tk.Label(self.sensor_frame, text='Resolution', font=TITLE_NAME_FONT)
-        self.camera_resolution_label.grid(row=3, column=0)
-        self.camera_resolution_choose = ttk.Combobox(self.sensor_frame, textvariable=self.camera_resolution_var, values=["640x480", "1280x720", "1640x922", "1640x1232", "2592x1944", "3280x2464"])
-        self.camera_resolution_choose.grid(row=3, column=1)
-        self.camera_resolution_choose.current(0)
-        
         self.sensor_frame.pack()
 
         # other set
@@ -219,9 +222,10 @@ class collectImageGUI:
             self.photo = None
         else:
             try:
-                self.camera.set_camera(resolution=self.camera_resolution_choose.get())
+                if self.resolution_temp is None or self.resolution_temp != self.camera_resolution_choose.get():
+                    self.camera.set_camera(resolution=self.camera_resolution_choose.get())
+                    self.resolution_temp = self.camera_resolution_choose.get()
                 frame = self.camera.get_frame()
-                print(frame.shape)
                 if self.user_choice_dict['roi'] is None:
                     h, w = frame.shape[:2]
                 else:
@@ -234,7 +238,8 @@ class collectImageGUI:
                     for roi in self.user_choice_dict['roi']:
                         image = cv2.rectangle(image, (int(roi[0]*self.rate), int(roi[1]*self.rate)), (int(roi[2]*self.rate), int(roi[3]*self.rate)), (255, 0, 0), 2)
                 image = ImageTk.PhotoImage(image=Image.fromarray(image))
-            except:
+            except Exception as e:
+                
                 if self.os == 'pi':
                     from GUI_commond import VideoCapture
                     self.camera = VideoCapture()
@@ -320,4 +325,4 @@ class collectImageGUI:
 if __name__ == "__main__":
     if not os.path.exists("condition_images"):
         os.mkdir("condition_images")
-    GUI = collectImageGUI(os='pi') 
+    GUI = collectImageGUI(os='windows') 

@@ -27,8 +27,14 @@ class collectImageOrVideo:
             
             self.camera = PiCamera(sensor_mode=0)
             self.PiRGBArray = PiRGBArray(self.camera)
-            self.camera.resolution = self.settings["resolution"]#(3280, 2464)
-            #self.camera.framerate = 15
+            if  self.settings["resolution"] == "Normal resolution":
+                self.camera.resolution = "640x480"
+            elif  self.settings["resolution"] == "Middle resolution":
+                self.camera.resolution = "1280x720"
+            elif  self.settings["resolution"] == "Higher resolution":
+                self.camera.resolution = "2592x1944"
+            elif  self.settings["resolution"] == "Maximum resolution":
+                self.camera.resolution = "3280x2464"
             
             self.ssim = ssim
             self.GPIO = GPIO
@@ -36,6 +42,13 @@ class collectImageOrVideo:
             from skimage.measure import compare_ssim as ssim
             self.ssim = ssim
             self.camera = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
+
+            if self.settings["resolution"] == "Normal resolution":
+                self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            elif self.settings["resolution"] == "Maximum resolution":
+                self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         else:
             raise ValueError("`os` must is `pi` or `windows`")
         self.os = os

@@ -230,7 +230,14 @@ class VideoCapture:
         return image
     
     def set_camera(self, resolution):
-        self.camera.resolution = resolution
+        if resolution == "Normal resolution":
+            self.camera.resolution = "640x480"
+        elif resolution == "Middle resolution":
+            self.camera.resolution = "1280x720"
+        elif resolution == "Higher resolution":
+            self.camera.resolution = "2592x1944"
+        elif resolution == "Maximum resolution":
+            self.camera.resolution = "3280x2464"
     
     def __del__(self):
         self.camera.close()
@@ -242,11 +249,22 @@ class VideoCaptureWebCamera():
             self.camers = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
         except Exception as e:
             print(e)
+    
     def get_frame(self):
         cap, frame = self.camers.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         return frame
 
+    def set_camera(self, resolution):
+        
+        if resolution == "Normal resolution":
+            self.camers.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.camers.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        elif resolution == "Maximum resolution":
+            self.camers.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            self.camers.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        
+        
     def __del__(self):
         self.camers.release()    
 
