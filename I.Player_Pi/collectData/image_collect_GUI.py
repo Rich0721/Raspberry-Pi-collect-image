@@ -24,11 +24,11 @@ MODE = {0:"High", 1:"Low"}
 
 class collectImageGUI:
 
-    def __init__(self, notebook, os='pi'):
+    def __init__(self, os='pi'):
         
-        self.windows = tk.Frame(notebook)#tk.Tk()
-        #self.windows.title("AUO L7B影像蒐集")
-        #self.windows.geometry("{}x{}".format(width, height))
+        self.windows = tk.Tk()
+        self.windows.title("I.Player - collect")
+        self.windows.geometry("{}x{}".format(700, 700))
         if os == 'pi':
             from collectData.GUI_commond import VideoCapture
             self.camera = VideoCapture()
@@ -54,7 +54,7 @@ class collectImageGUI:
         self.delay = 15
         self.update_condition()
         
-        #self.windows.mainloop()
+        self.windows.mainloop()
 
     def getWindows(self):
         return self.windows
