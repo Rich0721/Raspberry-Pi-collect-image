@@ -32,7 +32,7 @@ class collectImageGUI:
         if os == 'pi':
             from collectData.GUI_commond import VideoCapture
             self.camera = VideoCapture()
-            self.resolution = ["Low", "Normal", "High", "Maximum"]
+            self.resolution = ["Low", "Normal", "High"]#, "Maximum"]
         elif os == 'windows':
             from collectData.GUI_commond import VideoCaptureWebCamera
             self.camera = VideoCaptureWebCamera()
@@ -274,6 +274,7 @@ class collectImageGUI:
                 cv2.imshow("Save Image", frame)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+                self.user_choice_dict["roi"] = None
             elif mode == "cut":
                 draw = drawRoI(width=original_w, height=original_h)
                 #img = cv2.resize(frame, (display_w, display_h))

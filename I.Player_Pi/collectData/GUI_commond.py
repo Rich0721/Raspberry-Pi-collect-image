@@ -23,14 +23,14 @@ def executeCollectData(json_file, camera, os, windows):
 
     if exists(json_file):
         camera.__del__()
-        #windows.destroy()
+        windows.destroy()
         
         collect = collectImageOrVideo(json_file=json_file, os=os)
         collect.collect()
-        '''
+        
         from collectData.image_collect_GUI import collectImageGUI
         GUI = collectImageGUI(os=os)
-        '''
+        
         
     else:
         msg.showerror("Don't execute", "The file isn't existing!\nPlease create new file.")
@@ -237,7 +237,7 @@ class VideoCapture:
     
     def set_camera(self, resolution):
         if resolution == "Low":
-            self.camera.resolution = "640x480"
+            self.camera.resolution = "1296x972"
         elif resolution == "Normal":
             self.camera.resolution = "1920x1080"
         elif resolution == "High":
