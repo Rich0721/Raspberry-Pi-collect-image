@@ -2,15 +2,19 @@ import queue
 import cv2
 import os
 import json
-from ftplib import FTP
+from ftplib import FTP, error_perm
 from datetime import date, datetime
 from time import sleep
 import numpy as np
 from queue import Queue 
-
+import logging
+from logging import FileHandler
 ###################################################
 THRESHOLD = 0.8
 FPS = 10
+#logging.basicConfig(level=logging.INFO,
+#        handlers=[logging.FileHandler(filename="log.txt", encoding='utf-8', mode="a+")],
+#        format='[%(asctime)s %(levelname)-8s] %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 ###################################################
 
 class collectImageOrVideo:
@@ -67,16 +71,33 @@ class collectImageOrVideo:
         self.path = None
         self.video_writer = False
         self.image_writer = False
-        
+        self.check_time = datetime.now()
         self.start_time = None
-        #self.FTPConnect()
-        #self.FTPMkdir(self.settings['project name'])
-        #self.ftp.quit()
+        
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
+        format = '[%(asctime)s %(levelname)-8s] %(message)s'
+        self.formatter = logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S")
+        
+        self.openLoggingFile()
+
+        try:
+            self.FTPConnect()
+            self.FTPMkdir(self.settings['project name'])
+            self.ftp.quit()
+        except Exception as e:
+            self.logger.warning("Connect failed: {}".format(e))
+            pass
+        except error_perm as msg:
+            self.logger.warning("Connect failed: {}".format(msg))
+            pass
+
+        self.closeLoggingFile()
+
         self.ti = None
         self.queue = Queue()
-        
 
-        self.today = None
+        self.today = "2021-10-11"
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
         self.interval_time = int(self.settings['interval'])
         self.delay_time = int(self.settings['delay'])
@@ -103,6 +124,17 @@ class collectImageOrVideo:
         self.now_time = None
         self.last_time = None
 
+    def openLoggingFile(self):
+        self.file_hanlder = FileHandler(filename="log.txt", encoding='utf-8', mode="a")
+        self.file_hanlder.setFormatter(self.formatter)
+        self.logger.addHandler(self.file_hanlder)
+
+    def closeLoggingFile(self):
+        handler = self.logger.handlers[:]
+        for h in handler:
+            h.close()
+            self.logger.removeHandler(h)
+    
     def readJson(self, json_file):
         with open(json_file, "r", encoding='utf-8') as f:
             return json.load(f)
@@ -112,9 +144,12 @@ class collectImageOrVideo:
             self.ftp = FTP()
             self.ftp.connect(self.settings['FTP'], 21)
             self.ftp.login(self.settings['user'], self.settings['password'])
-            print("Connect {} success!".format(self.settings['FTP']))
-        except:
-            print("Connect {} failed".format(self.settings['FTP']))
+        except Exception as e:
+            self.logger.warning("Connect failed: {}".format(e))
+            pass
+        except error_perm as msg:
+            self.logger.warning("Connect failed: {}".format(msg))
+            pass
     
     def FTPUpload(self, files):
         try:
@@ -122,26 +157,34 @@ class collectImageOrVideo:
             self.FTPMkdir(self.settings['project name'])
             self.FTPMkdir(self.today)
             for f in files:
-                im = open(f, 'rb')#open(self.path, 'rb')
+                im = open(f, 'rb')
                 self.ftp.storbinary("STOR {}".format(f), im)
                 im.close()
-                os.remove(f)
-            print("Upload success!")
-            #os.remove(self.path)
-            self.path = None
+                if f != "log.txt":
+                    os.remove(f)
             self.ftp.quit()
-            self.last_time = self.now_time
+            
         except Exception as e:
-            print("Upload failed!")
+            self.logger.warning("Upload failed : {}".format(e))
+            pass
+        except error_perm as msg:
+            self.logger.warning("Upload failed : {}".format(msg))
             pass
 
     def FTPMkdir(self, folder):
-        if folder not in self.ftp.nlst():
-            self.ftp.mkd(folder)
-            self.ftp.cwd(folder)
-        else:
-            self.ftp.cwd(folder)
-    
+        try:
+            if folder not in self.ftp.nlst():
+                self.ftp.mkd(folder)
+                self.ftp.cwd(folder)
+            else:
+                self.ftp.cwd(folder)
+        except Exception as e:
+            self.logger.warning("Make directory failed : {}".format(e))
+            pass
+        except error_perm as msg:
+            self.logger.warning("Make directory failed : {}".format(msg))
+            pass
+
     def caluateSSIMAndTemplate(self, frame,  choice='SSIM'):
         
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -150,7 +193,10 @@ class collectImageOrVideo:
         if choice == 'SSIM':
             
             score = self.ssim(gray_frame, self.condition_image_gray)
+            
             if score >= THRESHOLD:
+                #logging.info("SSIM trigger success: {:.2f}".format(score))
+                self.logger.info("SSIM trigger success: {:.2f}".format(score))
                 return True
             else:
                 return False
@@ -160,7 +206,9 @@ class collectImageOrVideo:
                 
                 if self.settings['SSIM']:
                     score = self.ssim(gray_frame[roi[1]:roi[3], roi[0]:roi[2]], template)
+                    
                     if score >= THRESHOLD:
+                        self.logger.info("SSIM trigger success: {:.2f}".format(score))
                         return True
                 else:
                     res = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
@@ -173,6 +221,7 @@ class collectImageOrVideo:
                         storages.append([xmin, ymin])
                     
                     if len(storages) == len(self.condition_roi):
+                        self.logger.info("Template trigger success")
                         return True
                 return False
         else:
@@ -180,8 +229,10 @@ class collectImageOrVideo:
     
     def imageStorage(self, frame=None, queue=False):
         if not queue:
+            
             cv2.imwrite(self.path, frame)
-            #self.FTPUpload([self.path])
+            self.FTPUpload([self.path])
+            #self.path = None
         else:
             i = 0
             images = []
@@ -189,7 +240,10 @@ class collectImageOrVideo:
                 cv2.imwrite(self.path[:-4] + "_" + str(i) + ".jpg", self.queue.get())
                 images.append(self.path[:-4] + "_" + str(i) + ".jpg")
                 i += 1
-            #self.FTPUpload(images)
+            self.FTPUpload(images)
+        self.path = None
+        self.last_time = self.now_time
+        self.check_time = self.now_time
 
     def videoStorage(self):
         while not self.queue.empty():
@@ -206,7 +260,7 @@ class collectImageOrVideo:
                 choice = "Template"
 
             if self.caluateSSIMAndTemplate(frame, choice=choice):
-                    
+                
                 if self.delay_time > 0:
                     sleep(self.delay_time)
                 
@@ -229,7 +283,7 @@ class collectImageOrVideo:
                     self.video_writer = True
         elif self.settings['trigger'] == 'hardware':
             if self.GPIO.input(self.sensor_pin) == self.condition_sensor:
-                
+                self.logger.info("Hardware trigger success: {}".format(self.condition_sensor))
                 if self.delay_time > 0:
                     sleep(self.delay_time)
                     
@@ -258,7 +312,7 @@ class collectImageOrVideo:
             if self.caluateSSIMAndTemplate(frame, choice=choice):
                 self.double_trigger = True
             elif self.double_trigger:
-                
+                #logging.info("Double trigger success")
                 if self.delay_time > 0:
                     sleep(self.delay_time)
                 
@@ -272,13 +326,20 @@ class collectImageOrVideo:
         if self.os == 'pi':
             for image in self.camera.capture_continuous(self.PiRGBArray, format="rgb", use_video_port=self.video_port):
                 
+                self.openLoggingFile()
+
                 frame = image.array
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 self.now_time = datetime.now()
                 if self.today is None:
                     self.today = self.now_time.strftime("%Y-%m-%d")
                 elif self.today != self.now_time.strftime("%Y-%m-%d"):
+                    
+                    self.closeLoggingFile()
+                    self.FTPUpload(["log.txt"])
+                    os.remove("log.txt")
                     self.today = self.now_time.strftime("%Y-%m-%d")
+                    self.openLoggingFile()
                 
                 if self.image_writer:
                     if self.settings['continous_cut'] <= 1:
@@ -315,6 +376,11 @@ class collectImageOrVideo:
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF
                 self.PiRGBArray.truncate(0)
+                if (datetime.now() - self.check_time).seconds >= 600:
+                    self.regularCheck(frame)
+                    self.check_time = datetime.now()
+                self.closeLoggingFile()
+                self.FTPUpload(["log.txt"])
                 if key == ord('q'):
                     break
 
@@ -325,12 +391,18 @@ class collectImageOrVideo:
                 
                 self.now_time = datetime.now()
                 ret, frame = self.camera.read()
+                self.openLoggingFile()
                 
                 if self.today is None:
                     self.today = self.now_time.strftime("%Y-%m-%d")
                 elif self.today != self.now_time.strftime("%Y-%m-%d"):
-                    self.today = self.now_time.strftime("%Y-%m-%d")
                     
+                    self.closeLoggingFile()
+                    self.FTPUpload(["log.txt"])
+                    os.remove("log.txt")
+                    self.today = self.now_time.strftime("%Y-%m-%d")
+                    self.openLoggingFile()
+                
                 if self.image_writer:
                     if self.settings['continous_cut'] <= 1:
                         self.image_writer = False
@@ -359,14 +431,34 @@ class collectImageOrVideo:
                         self.judgeData(frame)
                     else:
                         seconds = (self.now_time - self.last_time).seconds
+                        
                         if seconds >= self.interval_time:
                             self.judgeData(frame)
                 
+
+                if (datetime.now() - self.check_time).seconds >= 600:
+                    self.regularCheck(frame)
+                    self.check_time = datetime.now()
+                self.closeLoggingFile()
+                self.FTPUpload(["log.txt"])
+                
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF
-                
                 if key == ord('q'):
                     break
                 
             cv2.destroyAllWindows()
             self.camera.release()
+    
+    def regularCheck(self, frame):
+
+        if self.settings['trigger'] == 'software' or self.settings['trigger'] == 'double':
+            if self.condition_roi is None:
+                choice = "SSIM"
+            else:
+                choice = "Template"
+            score = self.caluateSSIMAndTemplate(frame, choice=choice)
+            self.logger.warning("Don't detection: {} : {:.2f}".format(choice, score))
+        elif self.settings['trigger'] == 'hardware':
+            self.logger.warning("Don't detection: Potential: {}".format(self.GPIO.input(self.sensor_pin)))
+                
