@@ -223,13 +223,12 @@ class VideoCapture:
         from picamera.array import PiRGBArray
         from picamera import PiCamera
         self.camera = PiCamera(sensor_mode=0)
-        #self.camera.resolution = (1920, 1080) #(3280, 2464)#3280x2464
-        #self.camera.framerate = 15
+
         self.rawCapture = PiRGBArray(self.camera)
-        sleep(0.1)
+        #sleep(0.1)
         
     def get_frame(self):
-        self.camera.capture(self.rawCapture, format='rgb')
+        self.camera.capture(self.rawCapture, format='rgb', use_video_port=True)
         image =self.rawCapture.array
         #print(image.shape)
         self.rawCapture.truncate(0)
@@ -238,10 +237,13 @@ class VideoCapture:
     def set_camera(self, resolution):
         if resolution == "Low":
             self.camera.resolution = "1296x972"
+            self.camera.framerate = 30
         elif resolution == "Normal":
             self.camera.resolution = "1920x1080"
+            self.camera.framerate = 30
         elif resolution == "High":
             self.camera.resolution = "2592x1944"
+            self.camera.framerate = 15
         elif resolution == "Maximum":
             self.camera.resolution = "3280x2464"
     

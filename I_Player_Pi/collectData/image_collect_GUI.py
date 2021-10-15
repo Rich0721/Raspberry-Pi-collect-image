@@ -31,7 +31,9 @@ class collectImageGUI:
         self.windows.geometry("{}x{}".format(700, 700))
         if os == 'pi':
             from collectData.GUI_commond import VideoCapture
+            from picamera.array import PiRGBArray
             self.camera = VideoCapture()
+            self.PiRGBArray = PiRGBArray(self.camera.camera)
             self.resolution = ["Low", "Normal", "High"]#, "Maximum"]
         elif os == 'windows':
             from collectData.GUI_commond import VideoCaptureWebCamera
@@ -51,7 +53,7 @@ class collectImageGUI:
         self.user_choice_dict = None
         self.resolution_temp = None
         self.setBasicLabel()
-        self.delay = 15
+        self.delay = 150
         self.update_condition()
         
         self.windows.mainloop()
@@ -226,10 +228,10 @@ class collectImageGUI:
             self.photo = None
         else:
             try:
+                frame = self.camera.get_frame()
                 if self.resolution_temp is None or self.resolution_temp != self.camera_resolution_choose.get():
                     self.camera.set_camera(resolution=self.camera_resolution_choose.get())
                     self.resolution_temp = self.camera_resolution_choose.get()
-                frame = self.camera.get_frame()
                 if self.user_choice_dict['roi'] is None:
                     h, w = frame.shape[:2]
                 else:
@@ -244,7 +246,10 @@ class collectImageGUI:
                         #image = cv2.rectangle(image, (int(roi[0]*self.rate), int(roi[1]*self.rate)), (int(roi[2]*self.rate), int(roi[3]*self.rate)), (255, 0, 0), 2)
                 image = cv2.resize(image, (480, 270))
                 image = ImageTk.PhotoImage(image=Image.fromarray(image))
+                
             except Exception as e:
+                print(e)
+                self.camera. __del__()
                 if self.os == 'pi':
                     from collectData.GUI_commond import VideoCapture
                     self.camera = VideoCapture()
