@@ -33,16 +33,16 @@ class collectImageOrVideo:
             self.PiRGBArray = PiRGBArray(self.camera)
             if self.settings["resolution"] == "Low":
                 self.camera.resolution = "1296x972"
-                self.video_port=True
+                self.video_port=False
             elif self.settings["resolution"] == "Normal":
                 self.camera.resolution = "1920x1080"
-                self.video_port=True
+                self.video_port=False
             elif self.settings["resolution"] == "High":
                 self.camera.resolution = "2592x1944"
-                self.video_port=True
+                self.video_port=False
             elif self.settings["resolution"] == "Maximum":
                 self.camera.resolution = "3280x2464"
-                self.video_port=True
+                self.video_port=False
             #self.camera.resolution = self.settings["resolution"]#(3280, 2464)
             #self.camera.framerate = 15
             
@@ -80,7 +80,7 @@ class collectImageOrVideo:
         self.formatter = logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S")
         
         self.openLoggingFile()
-        '''
+
         try:
             self.FTPConnect()
             self.FTPMkdir(self.settings['project name'])
@@ -93,11 +93,11 @@ class collectImageOrVideo:
             pass
 
         self.closeLoggingFile()
-        '''
+
         self.ti = None
         self.queue = Queue()
 
-        self.today = None
+        self.today = "2021-10-11"
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
         self.interval_time = int(self.settings['interval'])
         self.delay_time = int(self.settings['delay'])
@@ -231,7 +231,7 @@ class collectImageOrVideo:
         if not queue:
             
             cv2.imwrite(self.path, frame)
-            #self.FTPUpload([self.path])
+            self.FTPUpload([self.path])
             #self.path = None
         else:
             i = 0
@@ -324,20 +324,20 @@ class collectImageOrVideo:
         cv2.namedWindow("Execute", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Execute", 640, 480)
         if self.os == 'pi':
-            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=self.video_port):
+            for image in self.camera.capture_continuous(self.PiRGBArray, format="rgb", use_video_port=self.video_port):
                 
                 self.openLoggingFile()
 
                 frame = image.array
-                #frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 self.now_time = datetime.now()
                 if self.today is None:
                     self.today = self.now_time.strftime("%Y-%m-%d")
                 elif self.today != self.now_time.strftime("%Y-%m-%d"):
                     
                     self.closeLoggingFile()
-                    #self.FTPUpload(["log.txt"])
-                    #os.remove("log.txt")
+                    self.FTPUpload(["log.txt"])
+                    os.remove("log.txt")
                     self.today = self.now_time.strftime("%Y-%m-%d")
                     self.openLoggingFile()
                 
@@ -380,7 +380,7 @@ class collectImageOrVideo:
                     self.regularCheck(frame)
                     self.check_time = datetime.now()
                 self.closeLoggingFile()
-                #self.FTPUpload(["log.txt"])
+                self.FTPUpload(["log.txt"])
                 if key == ord('q'):
                     break
 
@@ -398,8 +398,8 @@ class collectImageOrVideo:
                 elif self.today != self.now_time.strftime("%Y-%m-%d"):
                     
                     self.closeLoggingFile()
-                    #self.FTPUpload(["log.txt"])
-                    #os.remove("log.txt")
+                    self.FTPUpload(["log.txt"])
+                    os.remove("log.txt")
                     self.today = self.now_time.strftime("%Y-%m-%d")
                     self.openLoggingFile()
                 
@@ -440,7 +440,7 @@ class collectImageOrVideo:
                     self.regularCheck(frame)
                     self.check_time = datetime.now()
                 self.closeLoggingFile()
-                #self.FTPUpload(["log.txt"])
+                self.FTPUpload(["log.txt"])
                 
                 cv2.imshow("Execute", frame)
                 key = cv2.waitKey(1) & 0xFF

@@ -19,6 +19,7 @@ PIN_GPIO = {2:'3', 3:'5', 4:'7', 17:'11', 27:'13', 22:'15', 10:'19', 9:'21', 11:
             ,5:'29', 6:'31', 33:'33', 19:'35', 26:'37', 18:'12', 8:'25', 7:'26', 12:'32',\
             16:'36', 20:'38', 21:'40'}
 MODE = {0:"High", 1:"Low"}
+BACKGROUND_COLOR = "#D6CBC7"
 ###########################################
 
 
@@ -29,11 +30,10 @@ class collectImageGUI:
         self.windows = tk.Tk()
         self.windows.title("I.Player - collect")
         self.windows.geometry("{}x{}".format(700, 700))
+        self.windows.resizable(False, False)
         if os == 'pi':
             from collectData.GUI_commond import VideoCapture
-            from picamera.array import PiRGBArray
             self.camera = VideoCapture()
-            self.PiRGBArray = PiRGBArray(self.camera.camera)
             self.resolution = ["Low", "Normal", "High"]#, "Maximum"]
         elif os == 'windows':
             from collectData.GUI_commond import VideoCaptureWebCamera
@@ -53,7 +53,7 @@ class collectImageGUI:
         self.user_choice_dict = None
         self.resolution_temp = None
         self.setBasicLabel()
-        self.delay = 150
+        self.delay = 15
         self.update_condition()
         
         self.windows.mainloop()
@@ -62,88 +62,100 @@ class collectImageGUI:
         return self.windows
 
     def setBasicLabel(self):
+        
+        background_image = Image.open("./logo_images/Collect_background.png")
+        photo = ImageTk.PhotoImage(background_image)
+        background_canvas = tk.Canvas(self.windows, width=700, height=700)
+        background_canvas.background = photo
+        background_canvas.create_image(350, 350 , image=photo)
+        background_canvas.pack()
 
         # Set project, FTP, user and password's label and text
-        self.basic_set_frame = tk.Frame(self.windows, width=100, height=200)
-        self.project_label = tk.Label(self.basic_set_frame, text="Project name", font=TITLE_NAME_FONT)
+        self.basic_set_frame = tk.Frame(self.windows, width=100, height=200, background=BACKGROUND_COLOR)
+        self.project_label = tk.Label(self.basic_set_frame, text="Project name", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.project_label.grid(column=0, row=0)
         self.project_var = tk.StringVar()
         self.project_text = tk.Entry(self.basic_set_frame, textvariable=self.project_var)
         self.project_text.grid(column=1, row=0)
-        self.FTP_label = tk.Label(self.basic_set_frame, text="FTP server IP", font=TITLE_NAME_FONT)
+        self.FTP_label = tk.Label(self.basic_set_frame, text="FTP server IP", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.FTP_label.grid(column=2, row=0)
         self.FTP_var = tk.StringVar()
         self.FTP_text = tk.Entry(self.basic_set_frame, textvariable=self.FTP_var)
         self.FTP_text.grid(column=3, row=0)
-        self.user_label = tk.Label(self.basic_set_frame, text="user", font=TITLE_NAME_FONT)
+        self.user_label = tk.Label(self.basic_set_frame, text="user", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.user_label.grid(column=0, row=1)
         self.user_var = tk.StringVar()
         self.user_text = tk.Entry(self.basic_set_frame, textvariable=self.user_var)
         self.user_text.grid(column=1, row=1)
-        self.password_label = tk.Label(self.basic_set_frame, text="password", font=TITLE_NAME_FONT)
+        self.password_label = tk.Label(self.basic_set_frame, text="password", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.password_label.grid(column=2, row=1)
         self.password_var = tk.StringVar()
         self.password_text = tk.Entry(self.basic_set_frame, textvariable=self.password_var)
         self.password_text.grid(column=3, row=1)
         self.camera_resolution_var = tk.StringVar()
-        self.camera_resolution_label = tk.Label(self.basic_set_frame, text='Resolution', font=TITLE_NAME_FONT)
+        self.camera_resolution_label = tk.Label(self.basic_set_frame, text='Resolution', font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.camera_resolution_label.grid(row=3, column=0)
         self.camera_resolution_choose = ttk.Combobox(self.basic_set_frame, textvariable=self.camera_resolution_var, values=self.resolution,state="readonly", width=17)
         self.camera_resolution_choose.grid(row=3, column=1)
         self.camera_resolution_choose.current(0)
         self.cut_mode_var = tk.StringVar()
-        self.cut_mode_label = tk.Label(self.basic_set_frame, text='Cut mode', font=TITLE_NAME_FONT)
+        self.cut_mode_label = tk.Label(self.basic_set_frame, text='Cut mode', font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.cut_mode_label.grid(row=3, column=2)
         self.cut_mode_choose = ttk.Combobox(self.basic_set_frame, textvariable=self.cut_mode_var, state="readonly", width=17, values=["SSIM", "Template"])
         self.cut_mode_choose.grid(row=3, column=3, padx=5)
         self.cut_mode_choose.current(0)
 
         self.basic_set_frame.pack()
-
+        background_canvas.create_window(350, 40, window=self.basic_set_frame)
+        
         # Set collect image of method
         self.method_value = tk.IntVar()
         #method_value.set(1)
-        self.method_frame = tk.Frame(self.windows, width=100, height=50)
-        self.method_label = tk.Label(self.method_frame, text="Collected method" , font=TITLE_NAME_FONT)
+        self.method_frame = tk.Frame(self.windows, width=100, height=50, background=BACKGROUND_COLOR)
+        self.method_label = tk.Label(self.method_frame, text="Collected method" , font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.method_label.grid(column=0, row=0)
-        self.method_image_btn = tk.Radiobutton(self.method_frame, text="image", variable=self.method_value, value=0, font=BUTTON_FONT)
+        self.method_image_btn = tk.Radiobutton(self.method_frame, text="image", variable=self.method_value, value=0, font=BUTTON_FONT, background=BACKGROUND_COLOR)
         self.method_image_btn.grid(column=1, row=0)
-        self.method_video_btn = tk.Radiobutton(self.method_frame, text='video', variable=self.method_value, value=1, font=BUTTON_FONT)
+        self.method_video_btn = tk.Radiobutton(self.method_frame, text='video', variable=self.method_value, value=1, font=BUTTON_FONT, background=BACKGROUND_COLOR)
         self.method_video_btn.grid(column=2, row=0)
         self.method_frame.pack()
-
+        background_canvas.create_window(350, 90, window=self.method_frame)
+        
         # Set collect image condition
         self.condition_value = tk.IntVar()
-        self.condition_frame = tk.Frame(self.windows, width=100, height=250)
-        self.condition_label = tk.Label(self.condition_frame, text="Trigger Image", font=TITLE_NAME_FONT)
+        self.condition_frame = tk.Frame(self.windows, width=100, height=250, background=BACKGROUND_COLOR)
+        self.condition_label = tk.Label(self.condition_frame, text="Trigger Image", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.condition_label.grid(column=0, row=0)
-        self.condition_hardware = tk.Radiobutton(self.condition_frame, text="hardware", variable=self.condition_value, value=0, font=BUTTON_FONT)
+        self.condition_hardware = tk.Radiobutton(self.condition_frame, text="hardware", variable=self.condition_value, value=0, font=BUTTON_FONT, background=BACKGROUND_COLOR)
         self.condition_hardware.grid(column=1, row=0)
-        self.condition_software = tk.Radiobutton(self.condition_frame, text="software", variable=self.condition_value, value=1, font=BUTTON_FONT)
+        self.condition_software = tk.Radiobutton(self.condition_frame, text="software", variable=self.condition_value, value=1, font=BUTTON_FONT, background=BACKGROUND_COLOR)
         self.condition_software.grid(column=2, row=0)
-        self.condition_double = tk.Radiobutton(self.condition_frame, text="Double", variable=self.condition_value, value=2, font=BUTTON_FONT)
+        self.condition_double = tk.Radiobutton(self.condition_frame, text="Double", variable=self.condition_value, value=2, font=BUTTON_FONT, background=BACKGROUND_COLOR)
         self.condition_double.grid(column=3, row=0)
         self.condition_frame.pack()
-
+        background_canvas.create_window(350, 110, window=self.condition_frame)
+        
         # condition real image
-        self.condition_image_frame = tk.Frame(self.windows, width=480, height=320)
+        self.condition_image_frame = tk.Frame(self.windows, width=480, height=320, background=BACKGROUND_COLOR)
         self.condition_image = tk.Label(self.condition_image_frame)
         self.condition_image.grid(column=0, row=0)
         self.condition_image_frame.pack()
+        background_canvas.create_window(350, 260, window=self.condition_image_frame)
         
-        self.condition_button_frame = tk.Frame(self.windows, height=20)
+        self.condition_button_frame = tk.Frame(self.windows, height=20, background=BACKGROUND_COLOR)
         self.condition_cut_button = tk.Button(self.condition_button_frame, text="Cut", font=BUTTON_FONT, command=lambda: self.save_cut_photo(mode="cut"))
         self.condition_cut_button.grid(column=0, row=0)
         
         self.condition_save_button = tk.Button(self.condition_button_frame, text="Save", font=BUTTON_FONT, command=lambda: self.save_cut_photo(mode="save"))
         self.condition_save_button.grid(column=1, row=0)
         self.condition_button_frame.pack()
-
+        background_canvas.create_window(350, 420, window=self.condition_button_frame)
+        
         # Sensor Pin
         self.sensor_var = tk.StringVar()
         self.sensor_condition_var = tk.StringVar()
-        self.sensor_frame = tk.Frame(self.windows, height=20)
-        self.sensor_label = tk.Label(self.sensor_frame, text="IR sensor PIN  ", font=TITLE_NAME_FONT)
+        self.sensor_frame = tk.Frame(self.windows, height=20, background=BACKGROUND_COLOR)
+        self.sensor_label = tk.Label(self.sensor_frame, text="IR sensor PIN  ", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.sensor_label.grid(row=0, column=0)
         self.sensor_text = ttk.Combobox(self.sensor_frame, textvariable=self.sensor_var, values=["Choose Sensor Pin","3", "5", "7", "8", "11", "12", "13", "15", "16", "18", "19", "21", "22",\
                         "23", "24", "26", "29", "31", "32", "33", "35", "36", "37", "38", "40"])
@@ -151,41 +163,42 @@ class collectImageGUI:
         self.sensor_text.grid(row=0, column=1)
         self.sensor_test_button = tk.Button(self.sensor_frame, text="Test", height=1, font=BUTTON_FONT, command=lambda: testPIN(self.sensor_var.get()))
         self.sensor_test_button.grid(row=0, column=2)
-        self.sensor_condition_label = tk.Label(self.sensor_frame, text="Collected image using sensor", font=TITLE_NAME_FONT)
+        self.sensor_condition_label = tk.Label(self.sensor_frame, text="Collected image using sensor", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.sensor_condition_label.grid(row=1, column=0)
         self.sensor_condition_box = ttk.Combobox(self.sensor_frame, textvariable=self.sensor_condition_var, values=["Choose condition", "High", "Low"])
         self.sensor_condition_box.current(0)
         self.sensor_condition_box.grid(row=1, column=1)
         self.sensor_frame.pack()
-
+        background_canvas.create_window(350, 460, window=self.sensor_frame)
+        
         # other set
-        self.other_frame = tk.Frame(self.windows, height=20)
-        self.video_time_label = tk.Label(self.other_frame, text="Every video time(sec)", font=TITLE_NAME_FONT)
+        self.other_frame = tk.Frame(self.windows, height=20, background=BACKGROUND_COLOR)
+        self.video_time_label = tk.Label(self.other_frame, text="Every video time(sec)", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.video_time_label.grid(row=0, column=0)
         self.video_time_var = tk.StringVar()
         self.video_time_var.set(5)
         self.video_time_text = tk.Entry(self.other_frame, textvariable=self.video_time_var)
         self.video_time_text.grid(row=0, column=1)
-        self.interval_time_label = tk.Label(self.other_frame, text="Interval time(sec)", font=TITLE_NAME_FONT)
+        self.interval_time_label = tk.Label(self.other_frame, text="Interval time(sec)", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.interval_time_label.grid(row=0, column=2)
         self.interval_time_var = tk.StringVar()
         self.interval_time_var.set(0)
         self.interval_time_text = tk.Entry(self.other_frame, textvariable=self.interval_time_var)
         self.interval_time_text.grid(row=0, column=3)
-        self.delay_time_label = tk.Label(self.other_frame, text="Delay time(sec)", font=TITLE_NAME_FONT)
+        self.delay_time_label = tk.Label(self.other_frame, text="Delay time(sec)", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.delay_time_label.grid(row=1, column=0)
         self.delay_time_var = tk.StringVar(0)
         self.delay_time_var.set(0)
         self.delay_time_text = tk.Entry(self.other_frame, textvariable=self.delay_time_var)
         self.delay_time_text.grid(row=1, column=1)
-        self.continuous_label = tk.Label(self.other_frame, text="Continuous Cut", font=TITLE_NAME_FONT)
+        self.continuous_label = tk.Label(self.other_frame, text="Continuous Cut", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
         self.continuous_label.grid(row=1, column=2)
         self.continuous_var = tk.StringVar(0)
         self.continuous_var.set(0)
         self.continuous_text = tk.Entry(self.other_frame, textvariable=self.continuous_var)
         self.continuous_text.grid(row=1, column=3)
         self.other_frame.pack()
-        
+        background_canvas.create_window(350, 520, window=self.other_frame)
         
         self.user_choice_dict = {
             "Project_name": self.project_var,
@@ -207,7 +220,7 @@ class collectImageGUI:
         }
         
         # Load and create JSON file and execute collect data using JSON file.
-        self.button_frame = tk.Frame(self.windows, width=70, height=1)
+        self.button_frame = tk.Frame(self.windows, width=70, height=1, background=BACKGROUND_COLOR)
         self.save_button = tk.Button(self.button_frame, text="Save", height=1, width=5, font=BUTTON_FONT, command=lambda : CheckUserInput(self.user_choice_dict))
         self.save_button.grid(row=0, column=0)
         self.load_button = tk.Button(self.button_frame, text="Load", height=1, width=5, font=BUTTON_FONT, command=self.load_file)
@@ -219,6 +232,7 @@ class collectImageGUI:
             
             self.button_frame.grid_columnconfigure(col, minsize=100)
         self.button_frame.pack()
+        background_canvas.create_window(350, 570, window=self.button_frame)
         
     def update_condition(self):
         
@@ -228,10 +242,10 @@ class collectImageGUI:
             self.photo = None
         else:
             try:
-                frame = self.camera.get_frame()
                 if self.resolution_temp is None or self.resolution_temp != self.camera_resolution_choose.get():
                     self.camera.set_camera(resolution=self.camera_resolution_choose.get())
                     self.resolution_temp = self.camera_resolution_choose.get()
+                frame = self.camera.get_frame()
                 if self.user_choice_dict['roi'] is None:
                     h, w = frame.shape[:2]
                 else:
@@ -246,10 +260,7 @@ class collectImageGUI:
                         #image = cv2.rectangle(image, (int(roi[0]*self.rate), int(roi[1]*self.rate)), (int(roi[2]*self.rate), int(roi[3]*self.rate)), (255, 0, 0), 2)
                 image = cv2.resize(image, (480, 270))
                 image = ImageTk.PhotoImage(image=Image.fromarray(image))
-                
             except Exception as e:
-                print(e)
-                self.camera. __del__()
                 if self.os == 'pi':
                     from collectData.GUI_commond import VideoCapture
                     self.camera = VideoCapture()
