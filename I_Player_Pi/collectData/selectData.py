@@ -33,13 +33,16 @@ class collectImageOrVideo:
             self.PiRGBArray = PiRGBArray(self.camera)
             if self.settings["resolution"] == "Low":
                 self.camera.resolution = "1296x972"
-                self.video_port=False
+                self.video_port = True
+                self.camera.framerate = 30
             elif self.settings["resolution"] == "Normal":
                 self.camera.resolution = "1920x1080"
-                self.video_port=False
+                self.camera.framerate = 30
+                self.video_port = True
             elif self.settings["resolution"] == "High":
                 self.camera.resolution = "2592x1944"
-                self.video_port=False
+                self.camera.framerate = 15
+                self.video_port = True
             elif self.settings["resolution"] == "Maximum":
                 self.camera.resolution = "3280x2464"
                 self.video_port=False
@@ -97,7 +100,7 @@ class collectImageOrVideo:
         self.ti = None
         self.queue = Queue()
 
-        self.today = "2021-10-11"
+        self.today = None
         self.video_time = 0 if self.settings['method'] == "image" else int(self.settings["video_time"])
         self.interval_time = int(self.settings['interval'])
         self.delay_time = int(self.settings['delay'])
