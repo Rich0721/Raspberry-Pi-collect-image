@@ -10,7 +10,7 @@ from queue import Queue
 import logging
 from logging import FileHandler
 ###################################################
-THRESHOLD = 0.8
+THRESHOLD = 0.75
 FPS = 10
 #logging.basicConfig(level=logging.INFO,
 #        handlers=[logging.FileHandler(filename="log.txt", encoding='utf-8', mode="a+")],
@@ -33,19 +33,16 @@ class collectImageOrVideo:
             self.PiRGBArray = PiRGBArray(self.camera)
             if self.settings["resolution"] == "Low":
                 self.camera.resolution = "1296x972"
-                self.video_port = True
-                self.camera.framerate = 30
+                self.video_port=True
             elif self.settings["resolution"] == "Normal":
                 self.camera.resolution = "1920x1080"
-                self.camera.framerate = 30
-                self.video_port = True
+                self.video_port=True
             elif self.settings["resolution"] == "High":
                 self.camera.resolution = "2592x1944"
-                self.camera.framerate = 15
-                self.video_port = True
+                self.video_port=True
             elif self.settings["resolution"] == "Maximum":
                 self.camera.resolution = "3280x2464"
-                self.video_port=False
+                self.video_port=True
             #self.camera.resolution = self.settings["resolution"]#(3280, 2464)
             #self.camera.framerate = 15
             
@@ -83,7 +80,7 @@ class collectImageOrVideo:
         self.formatter = logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S")
         
         self.openLoggingFile()
-
+        
         try:
             self.FTPConnect()
             self.FTPMkdir(self.settings['project name'])
@@ -96,7 +93,7 @@ class collectImageOrVideo:
             pass
 
         self.closeLoggingFile()
-
+        
         self.ti = None
         self.queue = Queue()
 
@@ -192,7 +189,7 @@ class collectImageOrVideo:
         
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         storages = []
-
+        
         if choice == 'SSIM':
             
             score = self.ssim(gray_frame, self.condition_image_gray)
@@ -209,7 +206,7 @@ class collectImageOrVideo:
                 
                 if self.settings['SSIM']:
                     score = self.ssim(gray_frame[roi[1]:roi[3], roi[0]:roi[2]], template)
-                    
+                    print(score)
                     if score >= THRESHOLD:
                         self.logger.info("SSIM trigger success: {:.2f}".format(score))
                         return True
@@ -235,7 +232,7 @@ class collectImageOrVideo:
             
             cv2.imwrite(self.path, frame)
             self.FTPUpload([self.path])
-            #self.path = None
+            self.path = None
         else:
             i = 0
             images = []
@@ -327,12 +324,12 @@ class collectImageOrVideo:
         cv2.namedWindow("Execute", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Execute", 640, 480)
         if self.os == 'pi':
-            for image in self.camera.capture_continuous(self.PiRGBArray, format="rgb", use_video_port=self.video_port):
+            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=self.video_port):
                 
                 self.openLoggingFile()
 
                 frame = image.array
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                #frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 self.now_time = datetime.now()
                 if self.today is None:
                     self.today = self.now_time.strftime("%Y-%m-%d")
