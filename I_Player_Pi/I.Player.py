@@ -18,6 +18,7 @@ def goToGUI(root, choice=0):
     root.destroy()
     if choice == 0:
         collect_gui = collectImageGUI(os=OS)
+        collect_gui.__del__()
     elif choice == 1:
         analyze_gui = analyzeGUI()
     elif choice == 2:
