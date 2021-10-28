@@ -247,14 +247,18 @@ class collectImageGUI:
                     self.camera.set_camera(resolution=self.camera_resolution_choose.get())
                     self.resolution_temp = self.camera_resolution_choose.get()
                 frame = self.camera.get_frame()
+                '''
                 if self.user_choice_dict['roi'] is None:
                     h, w = frame.shape[:2]
                 else:
                     temp_image = cv2.imread(self.user_choice_dict['path'])
                     h, w = temp_image.shape[:2]
-                self.photo = frame
+                
                 self.rate = 480 / w
+                '''
+                self.photo = frame
                 image = frame.copy()
+                
                 if self.user_choice_dict['roi'] is not None:
                     for roi in self.user_choice_dict['roi']:
                         image = cv2.rectangle(image, (roi[0], roi[1]), (roi[2], roi[3]), (255, 0, 0), 2)

@@ -22,7 +22,7 @@ class collectImageOrVideo:
         
         self.settings = self.readJson(json_file)
         if os == 'pi':
-            from skimage.metrics import structural_similarity as ssim
+            from skimage.measure import compare_ssim as ssim
             from picamera.array import PiRGBArray
             from picamera import PiCamera
             import RPi.GPIO as GPIO
@@ -83,7 +83,7 @@ class collectImageOrVideo:
         self.formatter = logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S")
         
         self.openLoggingFile()
-
+        '''
         try:
             self.FTPConnect()
             self.FTPMkdir(self.settings['project name'])
@@ -94,7 +94,7 @@ class collectImageOrVideo:
         except error_perm as msg:
             self.logger.warning("Connect failed: {}".format(msg))
             pass
-
+        '''
         self.closeLoggingFile()
 
         self.ti = None
@@ -198,7 +198,6 @@ class collectImageOrVideo:
         if choice == 'SSIM':
             
             score = self.ssim(frame, self.condition_image, multichannel=True)
-            print(score)
             if score >= THRESHOLD:
                 #logging.info("SSIM trigger success: {:.2f}".format(score))
                 self.logger.info("SSIM trigger success: {:.2f}".format(score))
@@ -233,7 +232,7 @@ class collectImageOrVideo:
         if not queue:
             
             cv2.imwrite(self.path, frame)
-            self.FTPUpload([self.path])
+            #self.FTPUpload([self.path])
             #self.path = None
         else:
             i = 0
@@ -383,7 +382,7 @@ class collectImageOrVideo:
                     self.regularCheck(frame)
                     self.check_time = datetime.now()
                 self.closeLoggingFile()
-                self.FTPUpload(["log.txt"])
+                #self.FTPUpload(["log.txt"])
                 if key == ord('q'):
                     break
 
