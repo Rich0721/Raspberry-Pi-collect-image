@@ -10,7 +10,7 @@ from queue import Queue
 import logging
 from logging import FileHandler
 ###################################################
-THRESHOLD = 0.75
+THRESHOLD = 0.9
 FPS = 10
 #logging.basicConfig(level=logging.INFO,
 #        handlers=[logging.FileHandler(filename="log.txt", encoding='utf-8', mode="a+")],
@@ -33,16 +33,19 @@ class collectImageOrVideo:
             self.PiRGBArray = PiRGBArray(self.camera)
             if self.settings["resolution"] == "Low":
                 self.camera.resolution = "1296x972"
-                self.video_port=True
+                self.video_port = True
+                self.camera.framerate = 30
             elif self.settings["resolution"] == "Normal":
                 self.camera.resolution = "1920x1080"
-                self.video_port=True
+                self.camera.framerate = 30
+                self.video_port = True
             elif self.settings["resolution"] == "High":
                 self.camera.resolution = "2592x1944"
-                self.video_port=True
+                self.camera.framerate = 15
+                self.video_port = True
             elif self.settings["resolution"] == "Maximum":
                 self.camera.resolution = "3280x2464"
-                self.video_port=True
+                self.video_port=False
             #self.camera.resolution = self.settings["resolution"]#(3280, 2464)
             #self.camera.framerate = 15
             
@@ -80,7 +83,7 @@ class collectImageOrVideo:
         self.formatter = logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S")
         
         self.openLoggingFile()
-        
+
         try:
             self.FTPConnect()
             self.FTPMkdir(self.settings['project name'])
@@ -93,7 +96,7 @@ class collectImageOrVideo:
             pass
 
         self.closeLoggingFile()
-        
+
         self.ti = None
         self.queue = Queue()
 
@@ -105,6 +108,8 @@ class collectImageOrVideo:
 
         if self.settings['trigger'] == 'software' or self.settings['trigger'] == 'double':
             self.condition_image = cv2.imread(self.settings['path'])
+            self.condition_image = cv2.cvtColor(self.condition_image, cv2.COLOR_BGR2RGB)
+            self.condition_image = cv2.blur(self.condition_image, (5, 5))
         else:
             self.condition_image = None
         
@@ -187,13 +192,13 @@ class collectImageOrVideo:
 
     def caluateSSIMAndTemplate(self, frame,  choice='SSIM'):
         
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        storages = []
         
+        storages = []
+        frame = cv2.blur(frame, (5, 5))
         if choice == 'SSIM':
             
-            score = self.ssim(gray_frame, self.condition_image_gray)
-            
+            score = self.ssim(frame, self.condition_image, multichannel=True)
+            print(score)
             if score >= THRESHOLD:
                 #logging.info("SSIM trigger success: {:.2f}".format(score))
                 self.logger.info("SSIM trigger success: {:.2f}".format(score))
@@ -202,28 +207,25 @@ class collectImageOrVideo:
                 return False
         elif choice == 'Template':
             for roi in self.condition_roi:
-                template = self.condition_image_gray[roi[1]:roi[3], roi[0]:roi[2]]
                 
+                template = self.condition_image[roi[1]:roi[3], roi[0]:roi[2]]
                 if self.settings['SSIM']:
-                    score = self.ssim(gray_frame[roi[1]:roi[3], roi[0]:roi[2]], template)
-                    print(score)
+                    score = self.ssim(frame[roi[1]:roi[3], roi[0]:roi[2]], template, multichannel=True)
                     if score >= THRESHOLD:
-                        self.logger.info("SSIM trigger success: {:.2f}".format(score))
-                        return True
+                        storages.append("True")
                 else:
-                    res = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
-                    loc = np.where( res >= THRESHOLD)
+                    res = cv2.matchTemplate(frame, template, cv2.TM_SQDIFF_NORMED)
+                    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+                    if min_val <= (1 - THRESHOLD):
+                        storages.append("True")
                     
-                    if loc[0].size > 0 and loc[1].size > 0:
-                        xmin = max(loc[1])
-                        ymin = max(loc[0])
-    
-                        storages.append([xmin, ymin])
-                    
-                    if len(storages) == len(self.condition_roi):
-                        self.logger.info("Template trigger success")
-                        return True
-                return False
+            if len(storages) == len(self.condition_roi):
+                if self.settings['SSIM']:
+                    self.logger.info("Regoin SSIM trigger success")
+                else:
+                    self.logger.info("Template trigger success")
+                return True
+            return False
         else:
             raise ValueError("`choice` must is `SSIM` or `Template`.")
     
@@ -232,7 +234,7 @@ class collectImageOrVideo:
             
             cv2.imwrite(self.path, frame)
             self.FTPUpload([self.path])
-            self.path = None
+            #self.path = None
         else:
             i = 0
             images = []
@@ -324,11 +326,12 @@ class collectImageOrVideo:
         cv2.namedWindow("Execute", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Execute", 640, 480)
         if self.os == 'pi':
-            for image in self.camera.capture_continuous(self.PiRGBArray, format="bgr", use_video_port=self.video_port):
+            for image in self.camera.capture_continuous(self.PiRGBArray, format="rgb", use_video_port=self.video_port):
                 
                 self.openLoggingFile()
 
                 frame = image.array
+                display_frame = cv2.cvtColor(frame.copy(), cv2.COLOR_RGB2BGR)
                 #frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 self.now_time = datetime.now()
                 if self.today is None:
@@ -344,11 +347,11 @@ class collectImageOrVideo:
                 if self.image_writer:
                     if self.settings['continous_cut'] <= 1:
                         self.image_writer = False
-                        self.imageStorage(frame)
+                        self.imageStorage(display_frame)
                         self.double_trigger = False
                     else:
                         self.video_fps += 1
-                        self.queue.put(frame)
+                        self.queue.put(display_frame)
                         if self.video_fps >= self.settings['continous_cut']:
                             self.image_writer = False
                             self.video_fps = 0
@@ -356,7 +359,7 @@ class collectImageOrVideo:
                             self.double_trigger = False
                 elif self.video_writer:
                     self.video_fps += 1
-                    self.queue.put(frame)
+                    self.queue.put(display_frame)
                     if self.video_fps >= self.fps_numbers:
                         self.video_writer = False
                         self.videoStorage()
@@ -373,7 +376,7 @@ class collectImageOrVideo:
                             self.judgeData(frame)
                     
 
-                cv2.imshow("Execute", frame)
+                cv2.imshow("Execute", display_frame)
                 key = cv2.waitKey(1) & 0xFF
                 self.PiRGBArray.truncate(0)
                 if (datetime.now() - self.check_time).seconds >= 600:
@@ -392,7 +395,8 @@ class collectImageOrVideo:
                 self.now_time = datetime.now()
                 ret, frame = self.camera.read()
                 self.openLoggingFile()
-                
+                display_frame = frame.copy()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 if self.today is None:
                     self.today = self.now_time.strftime("%Y-%m-%d")
                 elif self.today != self.now_time.strftime("%Y-%m-%d"):
@@ -406,11 +410,11 @@ class collectImageOrVideo:
                 if self.image_writer:
                     if self.settings['continous_cut'] <= 1:
                         self.image_writer = False
-                        self.imageStorage(frame)
+                        self.imageStorage(display_frame)
                         self.double_trigger = False
                     else:
                         self.video_fps += 1
-                        self.queue.put(frame)
+                        self.queue.put(display_frame)
                         if self.video_fps >= self.settings['continous_cut']:
                             self.image_writer = False
                             self.video_fps = 0
@@ -418,7 +422,7 @@ class collectImageOrVideo:
                             self.double_trigger = False
                 elif self.video_writer:
                     self.video_fps += 1
-                    self.queue.put(frame)
+                    self.queue.put(display_frame)
                     if self.video_fps >= self.fps_numbers:
                         self.video_writer = False
                         self.videoStorage()
@@ -442,7 +446,7 @@ class collectImageOrVideo:
                 self.closeLoggingFile()
                 self.FTPUpload(["log.txt"])
                 
-                cv2.imshow("Execute", frame)
+                cv2.imshow("Execute", display_frame)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
                     break
@@ -461,4 +465,5 @@ class collectImageOrVideo:
             self.logger.warning("Don't detection: {} : {:.2f}".format(choice, score))
         elif self.settings['trigger'] == 'hardware':
             self.logger.warning("Don't detection: Potential: {}".format(self.GPIO.input(self.sensor_pin)))
+
                 

@@ -25,7 +25,7 @@ BACKGROUND_COLOR = "#D6CBC7"
 
 class collectImageGUI:
 
-    def __init__(self, os='pi'):
+    def __init__(self, os='pi', json_file=None):
         
         self.windows = tk.Tk()
         self.windows.title("I.Player - collect")
@@ -55,7 +55,8 @@ class collectImageGUI:
         self.setBasicLabel()
         self.delay = 15
         self.update_condition()
-        
+        if json_file is not None:
+            self.load_file(json_file)
         self.windows.mainloop()
 
     def getWindows(self):
@@ -310,8 +311,10 @@ class collectImageGUI:
                 
                 self.user_choice_dict["roi"] = draw.get_rectangle()
     
-    def load_file(self):
-        filename = fd.askopenfilename(filetypes=[('json files',"*.json")])
+    def load_file(self, filename=None):
+        if filename is None:
+            filename = fd.askopenfilename(filetypes=[('json files',"*.json")])
+        
         if len(filename) > 0:
             with open(filename, "r", encoding='utf-8') as f:
                 array_list = json.load(f)
@@ -359,7 +362,9 @@ class collectImageGUI:
                 self.delay_time_var.set(array_list['delay'])
                 self.continuous_var.set(array_list['continous_cut'])
                 self.camera_resolution_var.set(array_list["resolution"])
-            
+    
+    def __del__(self):
+        self.camera.__del__()
 
 if __name__ == "__main__":
     if not os.path.exists("./collectData/condition_images"):

@@ -29,7 +29,7 @@ def executeCollectData(json_file, camera, os, windows):
         collect.collect()
         
         from collectData.image_collect_GUI import collectImageGUI
-        GUI = collectImageGUI(os=os)
+        collectImageGUI(os=os, json_file=json_file)
         
         
     else:
@@ -256,12 +256,14 @@ class VideoCaptureWebCamera():
     def __init__(self):
         try:
             self.camers = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
+            #self.camers = cv2.VideoCapture("./videos/Arcing/2021-10-18 164134.mp4")
         except Exception as e:
             print(e)
     
     def get_frame(self):
         cap, frame = self.camers.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        #sleep(0.1)
         return frame
 
     def set_camera(self, resolution):
