@@ -12,13 +12,13 @@ if OS == "windows":
     from analyze.analyGUI import analyzeGUI
     from ExecuteResult.executeGUI import executeGUI
     from mergeCSV.mergeGUI import mergeGUI
+BACKGROUND_COLOR = "#D6CBC7"
 ###########################################
 
 def goToGUI(root, choice=0):
     root.destroy()
     if choice == 0:
-        collect_gui = collectImageGUI(os=OS)
-        collect_gui.__del__()
+        collect_gui = collectImageGUI(os_type=OS)
     elif choice == 1:
         analyze_gui = analyzeGUI()
     elif choice == 2:
@@ -34,8 +34,15 @@ def main_GUI():
     root = tk.Tk()
     root.title("I.Player")
     root.geometry('200x200')
+    root.resizable(False, False)
+    background_image = Image.open("./logo_images/Main_background.png")
+    photo = ImageTk.PhotoImage(background_image)
+    background_canvas = tk.Canvas(root, width=200, height=200)
+    background_canvas.background = photo
+    background_canvas.create_image(100, 100 , image=photo)
+    background_canvas.pack()
 
-    button_frame = tk.Frame(root)
+    button_frame = tk.Frame(root, background=BACKGROUND_COLOR)
     collect_button = tk.Button(button_frame, text="Collect", font=BUTTON_FONT, command=lambda:goToGUI(root, choice=0))
     collect_button.grid(row=0, column=0, padx=5, pady=5)
     if OS == "windows":
@@ -46,13 +53,7 @@ def main_GUI():
         merge_button = tk.Button(button_frame, text="Merge CSV", font=BUTTON_FONT, command=lambda:goToGUI(root, choice=3))
         merge_button.grid(row=1, column=1, padx=5, pady=5)
     button_frame.pack()
-
-    logo_image = Image.open("./IPlayer_logo.png")
-    w, h = logo_image.size
-    logo_image.resize((w//4, h//4))
-    logo_image = ImageTk.PhotoImage(logo_image)
-    image_label = tk.Label(root, image=logo_image)
-    image_label.place(x=50, y=100)
+    background_canvas.create_window(100, 50, window=button_frame)
 
     root.mainloop()
 
@@ -62,31 +63,3 @@ if  __name__ == "__main__":
 
     main_GUI()
     
-    
-    '''
-    root = tk.Tk()
-    root.title('I.Player')
-
-    root.geometry('700x650')
-
-    tab_main = ttk.Notebook()
-    tab_main.pack(anchor=tk.NW)
-
-    collect_gui = collectImageGUI(tab_main, os="windows")
-    
-    tab_main.add(collect_gui.getWindows(), text="Collect")
-    
-    analyze_gui = analyzeGUI(tab_main)
-    
-    tab_main.add(analyze_gui.getWindow(),text='Analysis')
-
-    visualization_gui = visualizationGUI(tab_main)
-    tab_main.add(visualization_gui.getWindows(), text='Visualization')
-
-    execute_gui = executeGUI(tab_main)
-    tab_main.add(execute_gui.getWindows(), text="Execute")
-    
-    execute_gui.getWindows().after(1000, execute_gui.executeAnalysis)
-    
-    root.mainloop()
-    '''

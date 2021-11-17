@@ -9,8 +9,9 @@ import numpy as np
 from queue import Queue 
 import logging
 from logging import FileHandler
+#from util.upload_health import upload_health
 ###################################################
-THRESHOLD = 0.9
+
 FPS = 10
 #logging.basicConfig(level=logging.INFO,
 #        handlers=[logging.FileHandler(filename="log.txt", encoding='utf-8', mode="a+")],
@@ -18,11 +19,11 @@ FPS = 10
 ###################################################
 
 class collectImageOrVideo:
-    def __init__(self, json_file, os='pi'):
+    def __init__(self, json_file, os_type='pi'):
         
         self.settings = self.readJson(json_file)
-        if os == 'pi':
-            from skimage.measure import compare_ssim as ssim
+        if os_type == 'pi':
+            from skimage.metrics import structural_similarity as ssim
             from picamera.array import PiRGBArray
             from picamera import PiCamera
             import RPi.GPIO as GPIO
@@ -51,7 +52,7 @@ class collectImageOrVideo:
             
             self.ssim = ssim
             self.GPIO = GPIO
-        elif os == 'windows':
+        elif os_type == 'windows':
             from skimage.measure import compare_ssim as ssim
             self.ssim = ssim
             self.camera = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
@@ -64,7 +65,20 @@ class collectImageOrVideo:
             
         else:
             raise ValueError("`os` must is `pi` or `windows`")
-        self.os = os
+        
+        try:
+            self.threshold = self.settings["threshold"]
+        except:
+            self.threshold = 0.9
+            pass
+
+        try:
+            self.project_id = self.settings["project_id"]
+        except:
+            self.project_id = ""
+            pass
+
+        self.os = os_type
         self.double_trigger = False
         self.fps_numbers = 0
         self.video_fps = 0 # writer in video frame numbers 
@@ -83,9 +97,16 @@ class collectImageOrVideo:
         self.formatter = logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S")
         
         self.openLoggingFile()
-        '''
+        try:
+            self.ftp_folder = self.settings["folder"]
+        except:
+            self.ftp_folder = ""
+            pass
+
         try:
             self.FTPConnect()
+            if len(self.ftp_folder) > 0:
+                self.FTPMkdir(self.ftp_folder)
             self.FTPMkdir(self.settings['project name'])
             self.ftp.quit()
         except Exception as e:
@@ -94,7 +115,7 @@ class collectImageOrVideo:
         except error_perm as msg:
             self.logger.warning("Connect failed: {}".format(msg))
             pass
-        '''
+
         self.closeLoggingFile()
 
         self.ti = None
@@ -159,6 +180,8 @@ class collectImageOrVideo:
     def FTPUpload(self, files):
         try:
             self.FTPConnect()
+            if len(self.ftp_folder) > 0:
+                self.FTPMkdir(self.ftp_folder)
             self.FTPMkdir(self.settings['project name'])
             self.FTPMkdir(self.today)
             for f in files:
@@ -168,7 +191,8 @@ class collectImageOrVideo:
                 if f != "log.txt":
                     os.remove(f)
             self.ftp.quit()
-            
+            #if len(self.project_id) > 0:
+            #    upload_health(self.project_id, 0)
         except Exception as e:
             self.logger.warning("Upload failed : {}".format(e))
             pass
@@ -198,7 +222,8 @@ class collectImageOrVideo:
         if choice == 'SSIM':
             
             score = self.ssim(frame, self.condition_image, multichannel=True)
-            if score >= THRESHOLD:
+            print(score)
+            if score >= self.threshold: #score >= THRESHOLD:
                 #logging.info("SSIM trigger success: {:.2f}".format(score))
                 self.logger.info("SSIM trigger success: {:.2f}".format(score))
                 return True
@@ -210,12 +235,12 @@ class collectImageOrVideo:
                 template = self.condition_image[roi[1]:roi[3], roi[0]:roi[2]]
                 if self.settings['SSIM']:
                     score = self.ssim(frame[roi[1]:roi[3], roi[0]:roi[2]], template, multichannel=True)
-                    if score >= THRESHOLD:
+                    if score >= self.threshold: #score >= THRESHOLD:
                         storages.append("True")
                 else:
                     res = cv2.matchTemplate(frame, template, cv2.TM_SQDIFF_NORMED)
                     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-                    if min_val <= (1 - THRESHOLD):
+                    if  min_val <= (1 - self.threshold): #min_val <= (1 - THRESHOLD):
                         storages.append("True")
                     
             if len(storages) == len(self.condition_roi):
@@ -232,7 +257,7 @@ class collectImageOrVideo:
         if not queue:
             
             cv2.imwrite(self.path, frame)
-            #self.FTPUpload([self.path])
+            self.FTPUpload([self.path])
             #self.path = None
         else:
             i = 0
@@ -382,7 +407,7 @@ class collectImageOrVideo:
                     self.regularCheck(frame)
                     self.check_time = datetime.now()
                 self.closeLoggingFile()
-                #self.FTPUpload(["log.txt"])
+                self.FTPUpload(["log.txt"])
                 if key == ord('q'):
                     break
 

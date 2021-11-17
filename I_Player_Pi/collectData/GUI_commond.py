@@ -19,17 +19,19 @@ showCrosshair = False # Don't display grid
 fromCenter = False # Select top-left to button-right
 #################################################
 
-def executeCollectData(json_file, camera, os, windows):
-
-    if exists(json_file):
+def executeCollectData(json_file, camera, os_type, windows):
+    
+    file_name = os.path.split(json_file)[-1]
+    if exists(file_name):
         camera.__del__()
         windows.destroy()
         
-        collect = collectImageOrVideo(json_file=json_file, os=os)
+        
+        collect = collectImageOrVideo(json_file=file_name, os_type=os_type)
         collect.collect()
         
         from collectData.image_collect_GUI import collectImageGUI
-        collectImageGUI(os=os, json_file=json_file)
+        collectImageGUI(os_type=os_type, json_file=file_name)
         
         
     else:
@@ -45,6 +47,23 @@ def testPIN(pin):
         GPIO.setup(pin_number, GPIO.IN)
         sleep(0.1)
         msg.showinfo("Pin's potential", "It is {}".format(GPIO.input(pin_number)))
+
+
+def checkDigit(text, using='float', content=None, last_check=True):
+
+    try:
+        if len(text) == 0:
+            return True and last_check
+        else:
+            if using == "float":
+                temp = float(text)
+            elif using == "int":
+                temp = int(text)
+            return True and last_check
+    except ValueError:
+        msg.showerror("Input error", "{} must is {}!".format(content, using))
+        return False
+        
 
 def CheckUserInput(stringVars:dict):
 
@@ -82,25 +101,16 @@ def CheckUserInput(stringVars:dict):
         msg.showerror("Input error", "Video time must is digit!")
         check_pass = False
     
-    if str.isdigit(stringVars['interval_time'].get()) or len(stringVars['interval_time'].get()) == 0:
-        pass
-    else:
-        msg.showerror("Input error", "Interval time must is digit!")
-        check_pass = False
     
-    if str.isdigit(stringVars['delay_time'].get()) or len(stringVars['delay_time'].get()) == 0:
-        pass
-    else:
-        msg.showerror("Input error", "Delay time must is digit!")
+    check_pass = checkDigit(stringVars['interval_time'].get(), content="Interval time", last_check=check_pass)
+    check_pass = checkDigit(stringVars['delay_time'].get(), content="Delay time", last_check=check_pass)
+    check_pass = checkDigit(stringVars['continous_cut'].get(), using='int', content="Continous cut", last_check=check_pass)
+    check_pass = checkDigit(stringVars["threshold"].get(), content="Threshold", last_check=check_pass)
+    if check_pass and (float(stringVars["threshold"].get()) > 1 or float(stringVars["threshold"].get()) < 0) :
+        msg.showerror("Input error", "Threshold must between 0 and 1!")
         check_pass = False
 
-    if str.isdigit(stringVars['continous_cut'].get()) or len(stringVars['continous_cut'].get()) == 0:
-        pass
-    else:
-        msg.showerror("Input error", "Continous cut must is digit!")
-        check_pass = False
-    
-    
+
     if check_pass:
         show_text = "Please check the following information\nProject Name:{}\nFTP IP:{}\nUser:{}\nPassword:{}\n".format(stringVars['Project_name'].get(), ftp_ip, stringVars["user"].get(), stringVars['password'].get())
         if stringVars["method"].get() == 0:
@@ -137,19 +147,32 @@ def CheckUserInput(stringVars:dict):
         if len(stringVars['continous_cut'].get()) > 0:
             show_text += "Continous cut:{}\n".format(stringVars['continous_cut'].get())
 
+        if len(stringVars["threshold"].get()) > 0:
+            show_text += "Threshold: {}\n".format(stringVars["threshold"].get())
+        
+        if len(stringVars["project_id"].get()) > 0:
+            show_text += "Project ID:{}\n".format(stringVars["project_id"].get())
+
         msg_box = msg.askyesno("Created Check", show_text)
         if msg_box:
             if os.path.exists(stringVars['Project_name'].get() + ".json"):
                 exist_box = msg.askyesno("Exist", "The Json file is existing!\nDo you want to cover?")
                 if exist_box:
-                    writeJson(stringVars['Project_name'].get() + ".json", stringVars)
+                    writeJson(stringVars)
             else:
-                writeJson(stringVars['Project_name'].get() + ".json", stringVars)
+                writeJson(stringVars)
 
-def writeJson(file_name, stringVars:dict):
+def writeJson(stringVars:dict):
 
     data = {}
-    data["project name"] = stringVars['Project_name'].get()
+    path = os.path.split(stringVars['Project_name'].get())
+    file_name = path[1] + ".json"
+    if len(path) == 0:
+        data["folder"] = ""
+    else:
+        data["folder"] = path[0]
+
+    data["project name"] = path[1] #stringVars['Project_name'].get()
     data["FTP"] = stringVars['FTP_IP'].get()
     data["user"] = stringVars['user'].get()
     data["password"] = stringVars["password"].get()
@@ -189,18 +212,28 @@ def writeJson(file_name, stringVars:dict):
     if len(stringVars["interval_time"].get()) == 0:
         data["interval"] = 0
     else:
-         data["interval"] = int(stringVars["interval_time"].get())
+         data["interval"] = float(stringVars["interval_time"].get())
     
     if len(stringVars["delay_time"].get()) == 0:
         data["delay"] = 0
     else:
-         data["delay"] = int(stringVars["delay_time"].get())
+         data["delay"] = float(stringVars["delay_time"].get())
 
     if len(stringVars["continous_cut"].get()) == 0:
         data['continous_cut'] = 0
     else:
         data['continous_cut'] = int(stringVars['continous_cut'].get())
     
+    if len(stringVars["threshold"].get()) == 0:
+        data["threshold"] = 0
+    else:
+        data["threshold"] = float(stringVars["threshold"].get())
+
+    if len(stringVars["project_id"].get()) == 14:
+        data["project_id"] = stringVars["project_id"].get()
+    else:
+        data["project_id"] = ""
+
     data["resolution"] = stringVars["resolution"].get()
 
     with open(file_name, 'w', encoding='utf-8') as f:
@@ -256,7 +289,7 @@ class VideoCaptureWebCamera():
     def __init__(self):
         try:
             self.camers = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
-            #self.camers = cv2.VideoCapture("./videos/Arcing/2021-10-18 164134.mp4")
+            #self.camers = cv2.VideoCapture("./videos/Arcing/2021-11-10 165740.mp4")
         except Exception as e:
             print(e)
     

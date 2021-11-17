@@ -25,23 +25,23 @@ BACKGROUND_COLOR = "#D6CBC7"
 
 class collectImageGUI:
 
-    def __init__(self, os='pi', json_file=None):
+    def __init__(self, os_type='pi', json_file=None):
         
         self.windows = tk.Tk()
         self.windows.title("I.Player - collect")
         self.windows.geometry("{}x{}".format(700, 700))
         self.windows.resizable(False, False)
-        if os == 'pi':
+        if os_type == 'pi':
             from collectData.GUI_commond import VideoCapture
             self.camera = VideoCapture()
             self.resolution = ["Low", "Normal", "High"]#, "Maximum"]
-        elif os == 'windows':
+        elif os_type == 'windows':
             from collectData.GUI_commond import VideoCaptureWebCamera
             self.camera = VideoCaptureWebCamera()
             self.resolution = ["Normal", "Maximum"]
         else:
             raise ValueError("os must is `pi` or `windows`")
-        self.os = os
+        self.os = os_type
         self.image_width = 0
         self.image_height = 0
         self.rate = 1
@@ -174,30 +174,41 @@ class collectImageGUI:
         
         # other set
         self.other_frame = tk.Frame(self.windows, height=20, background=BACKGROUND_COLOR)
+        self.project_id_var = tk.StringVar()
+        self.project_id_label = tk.Label(self.other_frame, text='Project ID', font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
+        self.project_id_label.grid(row=0, column=0)
+        self.project_id_entry = tk.Entry(self.other_frame, textvariable=self.project_id_var)
+        self.project_id_entry.grid(row=0, column=1)
+        self.threshold_var = tk.StringVar()
+        self.threshold_label = tk.Label(self.other_frame, text="Threshold", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
+        self.threshold_label.grid(row=0, column=2)
+        self.threshold_entry = tk.Entry(self.other_frame, textvariable=self.threshold_var)
+        self.threshold_entry.grid(row=0, column=3)
+        self.threshold_var.set(0.9)
         self.video_time_label = tk.Label(self.other_frame, text="Every video time(sec)", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
-        self.video_time_label.grid(row=0, column=0)
+        self.video_time_label.grid(row=1, column=0)
         self.video_time_var = tk.StringVar()
         self.video_time_var.set(5)
         self.video_time_text = tk.Entry(self.other_frame, textvariable=self.video_time_var)
-        self.video_time_text.grid(row=0, column=1)
+        self.video_time_text.grid(row=1, column=1)
         self.interval_time_label = tk.Label(self.other_frame, text="Interval time(sec)", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
-        self.interval_time_label.grid(row=0, column=2)
+        self.interval_time_label.grid(row=1, column=2)
         self.interval_time_var = tk.StringVar()
         self.interval_time_var.set(0)
         self.interval_time_text = tk.Entry(self.other_frame, textvariable=self.interval_time_var)
-        self.interval_time_text.grid(row=0, column=3)
+        self.interval_time_text.grid(row=1, column=3)
         self.delay_time_label = tk.Label(self.other_frame, text="Delay time(sec)", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
-        self.delay_time_label.grid(row=1, column=0)
+        self.delay_time_label.grid(row=2, column=0)
         self.delay_time_var = tk.StringVar(0)
         self.delay_time_var.set(0)
         self.delay_time_text = tk.Entry(self.other_frame, textvariable=self.delay_time_var)
-        self.delay_time_text.grid(row=1, column=1)
+        self.delay_time_text.grid(row=2, column=1)
         self.continuous_label = tk.Label(self.other_frame, text="Continuous Cut", font=TITLE_NAME_FONT, background=BACKGROUND_COLOR)
-        self.continuous_label.grid(row=1, column=2)
+        self.continuous_label.grid(row=2, column=2)
         self.continuous_var = tk.StringVar(0)
         self.continuous_var.set(0)
         self.continuous_text = tk.Entry(self.other_frame, textvariable=self.continuous_var)
-        self.continuous_text.grid(row=1, column=3)
+        self.continuous_text.grid(row=2, column=3)
         self.other_frame.pack()
         background_canvas.create_window(350, 520, window=self.other_frame)
         
@@ -217,7 +228,9 @@ class collectImageGUI:
             "sensor_condition":self.sensor_condition_var,
             "continous_cut":self.continuous_var,
             "cut_mode":self.cut_mode_var,
-            "resolution":self.camera_resolution_var
+            "resolution":self.camera_resolution_var,
+            "threshold": self.threshold_var,
+            "project_id":self.project_id_var,
         }
         
         # Load and create JSON file and execute collect data using JSON file.
@@ -233,7 +246,7 @@ class collectImageGUI:
             
             self.button_frame.grid_columnconfigure(col, minsize=100)
         self.button_frame.pack()
-        background_canvas.create_window(350, 570, window=self.button_frame)
+        background_canvas.create_window(350, 600, window=self.button_frame)
         
     def update_condition(self):
         
@@ -247,18 +260,14 @@ class collectImageGUI:
                     self.camera.set_camera(resolution=self.camera_resolution_choose.get())
                     self.resolution_temp = self.camera_resolution_choose.get()
                 frame = self.camera.get_frame()
-                '''
                 if self.user_choice_dict['roi'] is None:
                     h, w = frame.shape[:2]
                 else:
                     temp_image = cv2.imread(self.user_choice_dict['path'])
                     h, w = temp_image.shape[:2]
-                
-                self.rate = 480 / w
-                '''
                 self.photo = frame
+                self.rate = 480 / w
                 image = frame.copy()
-                
                 if self.user_choice_dict['roi'] is not None:
                     for roi in self.user_choice_dict['roi']:
                         image = cv2.rectangle(image, (roi[0], roi[1]), (roi[2], roi[3]), (255, 0, 0), 2)
@@ -322,7 +331,17 @@ class collectImageGUI:
         if len(filename) > 0:
             with open(filename, "r", encoding='utf-8') as f:
                 array_list = json.load(f)
-                self.project_var.set(array_list['project name'])
+                try:
+                    folder = array_list['folder']
+                except:
+                    folder = ""
+                    pass
+                
+                if len(folder) == 0:
+                    self.project_var.set(array_list['project name'])
+                else:
+                    self.project_var.set(folder + "/" +array_list['project name'])
+
                 self.FTP_var.set(array_list['FTP'])
                 self.user_var.set(array_list['user'])
                 self.password_var.set(array_list['password'])
@@ -345,19 +364,7 @@ class collectImageGUI:
                     self.user_choice_dict['path'] = array_list['path']
                     if array_list['Used_roi']:
                         self.user_choice_dict['roi'] = array_list['roi']
-                '''
-                if array_list['trigger'] == 'software' or array_list['trigger'] == "double":
-                    if 
-                    self.condition_value.set(1)
 
-                    self.user_choice_dict['path'] = array_list['path']
-                    if array_list['Used_roi']:
-                        self.user_choice_dict['roi'] = array_list['roi']
-                else:
-                    self.condition_value.set(0)
-                    self.sensor_var.set(PIN_GPIO[array_list['sensor']])
-                    self.sensor_condition_var.set(MODE[array_list['sensor condition']])
-                '''
                 if array_list['SSIM']:
                     self.cut_mode_choose.current(0)
                 else:
@@ -366,6 +373,16 @@ class collectImageGUI:
                 self.delay_time_var.set(array_list['delay'])
                 self.continuous_var.set(array_list['continous_cut'])
                 self.camera_resolution_var.set(array_list["resolution"])
+
+                try:
+                    self.threshold_var.set(array_list["threshold"])
+                except:
+                    pass
+
+                try:
+                    self.project_id_var.set(array_list["project_id"])
+                except:
+                    pass
     
     def __del__(self):
         self.camera.__del__()
